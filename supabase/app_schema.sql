@@ -774,3 +774,24 @@ revoke all on function public.geen_nieuwe_supporterregistratie() from public, an
 drop trigger if exists geen_nieuwe_supporterregistratie on auth.users;
 create trigger geen_nieuwe_supporterregistratie before insert on auth.users
  for each row execute function public.geen_nieuwe_supporterregistratie();
+
+
+-- Openbare spelersnamen, wedstrijdcijfers en boetes. Contactgegevens en vrije opmerkingen blijven intern.
+create or replace function public.openbare_spelerscijfers() returns jsonb
+language sql stable security definer set search_path = public as $$
+ select jsonb_build_object(
+ 'spelers', coalesce((select jsonb_agg(to_jsonb(p) order by naam) from (
+ select id, naam from members where speelt or exists (select 1 from match_stats where member_id = members.id) or exists (select 1 from fines where member_id = members.id)
+ ) p), '[]'::jsonb),
+ 'stats', coalesce((select jsonb_agg(to_jsonb(s)) from (
+ select s.match_key, s.member_id, s.gespeeld, s.goals, s.assists, s.geel, s.rood from match_stats s
+ join matches m on m.match_key = s.match_key where m.thuis_id = 152 or m.uit_id = 152
+ ) s), '[]'::jsonb),
+ 'boetes', coalesce((select jsonb_agg(to_jsonb(f) order by datum desc) from (
+ select id, member_id, match_key, datum, soort, aantal, bedrag_cent, bak_bier,
+ null::text as opmerking, null::uuid as ingevoerd_door from fines
+ ) f), '[]'::jsonb)
+ );
+$$;
+revoke all on function public.openbare_spelerscijfers() from public;
+grant execute on function public.openbare_spelerscijfers() to anon, authenticated;

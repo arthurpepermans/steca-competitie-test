@@ -1,5 +1,12 @@
 import { supabase } from "./supabase";
-import type { Match, Standing, Team } from "./types";
+import type { Fine, Match, MatchStat, Standing, Team } from "./types";
+
+export type OpenbareCijfers = { spelers: { id: string; naam: string }[]; stats: MatchStat[]; boetes: Fine[] };
+export async function haalOpenbareCijfers(): Promise<OpenbareCijfers> {
+  const { data, error } = await supabase.rpc("openbare_spelerscijfers");
+  if (error) throw new Error("De statistieken en boetes konden niet geladen worden.");
+  return data as OpenbareCijfers;
+}
 
 export type SupportersData = {
   matches: Match[];
