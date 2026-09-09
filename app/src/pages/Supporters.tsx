@@ -7,10 +7,12 @@ import { EIGEN_PLOEGID } from "../lib/config";
 import { Fout, Laden } from "../components/Layout";
 import { MapsKnop, MatchKaart } from "../components/MatchKaart";
 import { Klassementstabel } from "../components/Klassementstabel";
+import { OpenbareStatistieken } from "../components/OpenbareStatistieken";
 
 export function Supporters() {
   const info = useAsync(haalSupportersData);
   const [tab, setTab] = useState("Kalender");
+  const [ranglijst, setRanglijst] = useState("Ploegenklassement");
   const [reeks, setReeks] = useState<string | null>(null);
   const data = info.data;
   const reeksen = [...new Set(data?.klassement.map((r) => r.reeks) ?? [])].sort();
@@ -42,8 +44,12 @@ export function Supporters() {
       </>}
       {data && tab === "Klassement" && <>
         <h2>Klassement</h2>
+        <div className="supporters-tabs" aria-label="Klassementonderdelen">{["Ploegenklassement", "Statistieken", "Boetepot"].map((naam) => <button type="button" key={naam} className={`knop ${ranglijst === naam ? "" : "licht"}`} aria-pressed={ranglijst === naam} onClick={() => setRanglijst(naam)}>{naam}</button>)}</div>
+        {ranglijst === "Ploegenklassement" && <>
         {reeksen.length > 1 && <div className="veld"><label htmlFor="supporters-reeks">Reeks</label><select id="supporters-reeks" value={gekozen ?? ""} onChange={(e) => setReeks(e.target.value)}>{reeksen.map((r) => <option key={r}>{r}</option>)}</select></div>}
         {data.klassement.some((r) => r.reeks === gekozen) ? <Klassementstabel rijen={data.klassement.filter((r) => r.reeks === gekozen)} /> : <p>Het klassement is nog niet beschikbaar.</p>}
+        </>}
+        {ranglijst !== "Ploegenklassement" && <OpenbareStatistieken matches={matches} boetepot={ranglijst === "Boetepot"} />}
       </>}
       {data && tab === "Ploegen" && <>
         <h2>Ploegen en terreinen</h2>
