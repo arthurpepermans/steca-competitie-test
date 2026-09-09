@@ -1,0 +1,26 @@
+{
+  "name": "Steca Juniors Test",
+  "short_name": "Steca Juniors Test",
+  "description": "Kalender, uitslagen, klassement, aanwezigheden en opstelling van Steca Juniors",
+  "start_url": "./clubapp.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4ecd6",
+  "theme_color": "#2d2d2b",
+  "lang": "nl",
+  "icons": [
+    {
+      "src": "icon-retro-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-retro-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "id": "./"
+}

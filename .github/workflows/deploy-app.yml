@@ -1,0 +1,64 @@
+# Bouwt de webapp (app/) en publiceert ze op GitHub Pages.
+# Vereist twee repository variables (Settings > Secrets and variables > Actions > Variables):
+#   VITE_SUPABASE_URL en VITE_SUPABASE_ANON_KEY (de anon key is bedoeld voor de browser; rechten zitten in de database).
+# Het basispad volgt automatisch de Pages-instellingen: met een eigen domein (stecajuniors.app) bouwt de app op "/",
+# zonder eigen domein op "/steca-competitie/". Lokaal blijft "/steca-competitie/" de standaard (zie app/vite.config.ts).
+name: deploy-testapp
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**", ".github/workflows/deploy-app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - run: npm ci
+      - run: npm test
+      - name: Bouwen
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+        run: |
+          echo "Basispad: $BASE_PATH (site: ${{ steps.pages.outputs.base_url }})"
+          test "$VITE_SUPABASE_URL" = "https://fhgghcksvnyxfwkielzx.supabase.co"
+          test -n "$VITE_SUPABASE_ANON_KEY"
+          npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
