@@ -326,3 +326,7 @@ html,body,#root{touch-action:pan-x pan-y}
 .sfeer-wissen p { margin: 6px 0; }
 
 .testomgeving-melding { background: #e5be47; color: #252620; text-align: center; padding: calc(6px + env(safe-area-inset-top)) 12px 6px; font: 800 12px/1.5 sans-serif; letter-spacing: .04em; }
+
+.supporters-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+.supporters-tabs .knop { flex: 1; }
+.supporters-inhoud { padding-bottom: 32px; }
