@@ -380,33 +380,5 @@ html,body,#root{touch-action:pan-x pan-y}
 .meldingen-popup h2 { margin-top: 12px; }
 .meldingen-popup .knoppen { margin-top: 24px; }
 
-/* Matchkaart in de kalender: één keuzebalk als enige omkaderde actie, de rest als tekstlinks, minder witruimte. */
-.matchkaart { padding: 16px 18px 12px; }
-.matchkaart-kop { display: flex; justify-content: space-between; gap: 10px; font: 600 11px/1.5 "Manrope", sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--tekst-zacht); margin-bottom: 10px; }
-.matchkaart .uitslag { margin-bottom: 10px; }
-.matchkaart-terrein { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tekst-zacht); padding-bottom: 12px; border-bottom: 1px solid var(--rand); }
-.matchkaart-terrein > svg { flex: 0 0 auto; }
-.matchkaart-terrein > span:first-of-type { flex: 1; min-width: 0; }
-.matchkaart .aanwezigheid { margin-top: 12px; }
-.keuzebalk { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--tekst); background: var(--kaart); }
-.keuzebalk button { min-height: 42px; border: none; border-right: 1px solid var(--rand); background: transparent; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--tekst); }
-.keuzebalk button:last-child { border-right: none; }
-.keuzebalk button[aria-pressed="true"] { background: var(--tekst); color: var(--kaart); }
-.keuzebalk button:disabled { opacity: .6; cursor: wait; }
-.keuzebalk.compact button { min-height: 30px; font-size: 11px; }
-.aanwezig-lijn { font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
-.aanwezig-lijn strong { color: var(--tekst); }
-.aanwezig-lijn .tekst-knop { margin-left: 8px; }
-.aanwezig-beheer { display: flex; flex-wrap: wrap; gap: 0 18px; margin: 2px 0 0; }
-.aanwezigheid .lijst.omrand { margin-top: 10px; }
-.tekst-knop { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0; border: none; background: none; color: var(--kleur); font: 600 12px/1.4 "Manrope", sans-serif; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
-.tekst-knop:disabled { opacity: .6; cursor: wait; }
-.matchkaart-voet { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--rand); display: flex; gap: 18px; }
-.matchkaart .sfeerbeelden { margin-top: 10px; padding-top: 2px; }
-.matchkaart .sfeer-open { min-height: 32px; padding: 4px 0; border: none; border-radius: 0; background: none; color: var(--kleur); font-size: 12px; font-weight: 600; margin: 0; }
-.matchkaart .sfeer-open span { text-decoration: underline; text-underline-offset: 4px; }
-.matchkaart .junior { margin-top: 12px; }
-@media (max-width: 600px) {
-  .matchkaart { padding: 14px 14px 10px; }
-  .keuzebalk button { font-size: 12px; gap: 4px; }
-}
+/* Knop die als tekstlink oogt (Namen tonen bij de aanwezigheden). */
+.tekst-knop { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0; border: none; background: none; color: var(--kleur); font: 600 12px/1.4 "Manrope", sans-serif; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; white-space: nowrap; }
