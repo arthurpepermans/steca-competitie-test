@@ -372,3 +372,6 @@ html,body,#root{touch-action:pan-x pan-y}
 .test-scenario { border-bottom: 1px solid var(--rand); padding: 12px 0; }
 .test-scenario .knop { width: 100%; }
 .test-scenario p { margin-top: 8px; }
+
+/* Spelersstatistieken op het profiel: elke tegel met een streepje links, ook de eerste. */
+.speler-cijfers > div { border-left: 1px solid var(--rand); padding-left: 14px; }
