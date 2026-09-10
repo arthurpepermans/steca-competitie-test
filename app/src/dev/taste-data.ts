@@ -47,6 +47,13 @@ export function installeerTestgegevens() {
     if (!url.pathname.startsWith("/rest/v1/")) return antwoord({ message: "Dit ontwerpvoorbeeld gebruikt geen echte accounts." }, 400);
     const tabel = url.pathname.slice("/rest/v1/".length);
     if (tabel === 'match_reports') return antwoord([{match_key:matches[0].match_key,thuis_score:1,uit_score:2,updated_at:'2026-09-10T07:00:00Z',score_at:'2026-09-10T07:00:00Z',momenten:[{minuut:18,soort:'goal',kant:'uit',speler:'Bram Hendrickx',assist:'Florian Goossens'},{minuut:36,soort:'goal',kant:'thuis',speler:'Speler FC Patron',assist:''},{minuut:67,soort:'goal',kant:'uit',speler:'Lennert De Clercq',assist:'Bram Hendrickx'},{minuut:74,soort:'geel',kant:'thuis',speler:'Speler FC Patron',assist:''}]}]);
+    if(tabel==='rpc/kantine_spelers')return antwoord(leden.filter(m=>m.speelt).map(m=>({id:m.id,naam:m.naam})));
+    if(tabel==='rpc/openbare_clubinfo')return antwoord({matches,klassement:stand,ploegen:teams});
+    if(tabel==='rpc/kantine_klassement')return antwoord([]);
+    if(tabel==='dream_xi')return antwoord(null);
+    if(tabel==='pronostieken')return antwoord([]);
+    if(tabel==='rpc/bewaar_dream_xi')return antwoord(new Date().toISOString());
+    if(tabel==='rpc/bewaar_pronostiek')return antwoord(null);
     if (request.method !== "GET") {
       if ((tabel === "rpc/bewaar_opstelling" || tabel === "rpc/bewaar_opstelling_met_slotjes" || tabel === "rpc/bewaar_opstelling_auto") && request.method === "POST") {
         const waarde = await request.json();
