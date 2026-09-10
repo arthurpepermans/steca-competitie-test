@@ -385,3 +385,16 @@ html,body,#root{touch-action:pan-x pan-y}
 
 /* De Kantine blijft visueel onderdeel van de bestaande clubapp. */
 .kantine-prive{border:2px solid #c69d29;background:#ead58a;color:#292929}.kantine-prive p{margin:8px 0}.kantine-acties{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:16px 0}.dream-keuzes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.dream-keuzes select{min-width:0;flex:1}.dream-keuzes .rij{display:flex;gap:6px}.prono-invoer{display:flex;align-items:center;justify-content:center;gap:15px;margin:16px 0}.prono-invoer label{flex:1;text-align:center;font-size:.85rem}.prono-invoer input{display:block;width:80px;max-width:100%;margin:8px auto;font-size:1.5rem;text-align:center}.tabel-scroll{overflow-x:auto}@media(max-width:500px){.dream-keuzes{grid-template-columns:1fr}}
+/* Matchverslag uitklappen in de kalenderkaart: ronde knop met pijltje. */
+.verslag-uitklap { margin-top: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--rand); }
+.verslag-uitklap-kop { display: flex; justify-content: center; }
+.knop-rond { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--tekst); background: var(--kaart); color: var(--tekst); display: inline-grid; place-items: center; padding: 0; flex-shrink: 0; }
+.knop-rond[aria-expanded="true"] { background: var(--tekst); color: var(--kaart); }
+.verslag-uitklap-inhoud { margin-top: 10px; padding-top: 4px; border-top: 1px solid var(--rand); }
+.verslag-uitklap-inhoud .verslag-titel { margin-top: 12px; font-size: 22px; }
+.verslag-uitklap-inhoud .verslag-invoer { margin-top: 12px; }
+
+/* Datumveld op iOS: zelfde breedte en uitlijning als de andere velden (Safari centreert en rekt het standaard uit). */
+.veld input[type="date"] { display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; -webkit-appearance: none; appearance: none; text-align: left; font: inherit; color: inherit; line-height: 1.3; }
+.veld input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 1.3em; }
+
