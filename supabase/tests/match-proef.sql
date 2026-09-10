@@ -1,7 +1,7 @@
 -- Integratietest op de testdatabase. Alles wordt teruggedraaid, inclusief het fictieve account.
 begin;
 do $test$
-declare u uuid:=gen_random_uuid(); lid uuid; key text:='controle-'||gen_random_uuid(); versie timestamptz; eerste timestamptz; job uuid; geweigerd boolean:=false;
+declare u uuid:=gen_random_uuid(); lid uuid; key text:='controle-'||gen_random_uuid(); versie timestamptz; eerste timestamptz; job uuid; nieuw text; geweigerd boolean:=false;
 begin
  if has_table_privilege('authenticated','public.push_config','select') or has_table_privilege('anon','public.push_subscriptions','select') or has_function_privilege('authenticated','public.push_planning()','execute') then raise exception 'Pushgegevens niet afgeschermd'; end if;
  if match_aftrap('2026-10-25','15:00')<>'2026-10-25 14:00:00+00'::timestamptz or match_aftrap('2026-09-12','15:00')<>'2026-09-12 13:00:00+00'::timestamptz then raise exception 'Tijdzone onjuist'; end if;
@@ -27,7 +27,15 @@ begin
  update push_config set allowed_member=lid,enabled=true where id=1;
  insert into push_jobs(match_key,member_id,soort) values(key,lid,'stemmen') returning id into job;
  if not claim_push_job(job) or claim_push_job(job) then raise exception 'Job kon tegelijk dubbel geclaimd worden'; end if;
+ perform set_config('request.jwt.claim.sub',u::text,true);
+ nieuw:=maak_testmatch();
+ if (select match_aftrap(datum,uur) from matches where match_key=nieuw)>now()-interval '80 minutes' then raise exception 'Testmatch niet verstreken'; end if;
+ perform bewaar_matchverslag(nieuw,2,1,'[]',null);
+ perform verwijder_testmatch(nieuw);
+ if exists(select 1 from matches where match_key=nieuw) or exists(select 1 from match_reports where match_key=nieuw) or exists(select 1 from attendance where match_key=nieuw) then raise exception 'Testmatch niet volledig verwijderd'; end if;
+ geweigerd:=false;
+ begin perform verwijder_testmatch(key); exception when others then geweigerd:=true; end;
+ if not geweigerd then raise exception 'Andere wedstrijd kon verwijderd worden'; end if;
 end $test$;
 rollback;
 select 'GESLAAGD: rechten, Belgische tijdzone, opslaan, conflictcontrole en ongewijzigd eerste scoremoment' as resultaat;
-

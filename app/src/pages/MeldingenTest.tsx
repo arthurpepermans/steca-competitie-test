@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { maakTestmatch } from '../lib/testmatches';
 import { pushActie, pushOndersteund, zetMeldingenAan, zetMeldingenUit, type PushStatus } from '../lib/push';
 import { foutTekst, useAsync } from '../lib/useAsync';
 import { Fout, Laden } from '../components/Layout';
@@ -14,6 +15,7 @@ const scenarios = [
   ['gestemd','Stem al uitgebracht','Verwacht: géén stemherinnering.'],
 ];
 export function MeldingenTest() {
+  const navigate=useNavigate();
   const info = useAsync(() => pushActie<PushStatus>('status'));
   const [fout,setFout] = useState('');
   const [melding,setMelding] = useState('');
@@ -32,6 +34,7 @@ export function MeldingenTest() {
         <div className="knoppen"><button className="knop" disabled={bezig || !pushOndersteund()} onClick={()=>doe(()=>zetMeldingenAan(info.data!.publicKey),'Dit toestel is gekoppeld voor testmeldingen.')}>Meldingen aanzetten</button><button className="knop licht" disabled={bezig || !pushOndersteund()} onClick={()=>doe(zetMeldingenUit,'Meldingen uitgeschakeld op dit toestel.')}>Meldingen uitzetten</button></div>
         {!info.data.enabled && <p className="melding waarschuwing">Verzending staat nog uit op de server.</p>}
       </section>
+      <section className="kaart"><h2>Zelf een testmatch invullen</h2><p>Maak een wedstrijd alsof ze net gespeeld is. Vul zelf de uitslag, goals en assists in. Bij het opslaan kan de stemmelding naar jouw testaccount vertrekken.</p><button className="knop" disabled={bezig} onClick={()=>doe(async()=>{const key=await maakTestmatch();navigate(`/match/${encodeURIComponent(key)}?invullen=1`);},'Testmatch aangemaakt.')}>Gespeelde testmatch aanmaken</button><p className="klein zacht">Je kunt de testmatch daarna weer verwijderen via het matchverslag.</p></section>
       <section className="kaart"><h2>Een match nabootsen</h2><p>Elke knop maakt een nieuwe fictieve match met het gekozen tijdstip. Je echte wedstrijden veranderen niet. Alle meldingen beginnen met TEST.</p>
         <div className="test-scenario-lijst">{scenarios.map(([code,titel,uitleg])=><div className="test-scenario" key={code}><button className="knop licht" disabled={bezig} onClick={()=>doe(async()=>{const r=await pushActie<{matchKey:string;verzonden:number}>('scenario',{scenario:code});setMatchKey(r.matchKey);},'Testmatch aangemaakt. Controleer de melding en het verzendoverzicht.')}>{titel}</button><p className="klein zacht">{uitleg}</p></div>)}</div>
         {matchKey && <p><Link className="knop" to={`/match/${encodeURIComponent(matchKey)}`}>Open het testmatchverslag</Link></p>}

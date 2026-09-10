@@ -995,3 +995,32 @@ insert into matches(match_key,seizoen,reeks,datum,uur,thuis_id,uit_id,thuis,uit,
 values('test-matchverslag-voorbeeld','2026-2027','TESTMATCH',current_date-1,'15:00',152,9901,'Steca Juniors','FC Test United',2,1,'gespeeld','test',now()) on conflict do nothing;
 insert into match_reports(match_key,thuis_score,uit_score,momenten)
 values('test-matchverslag-voorbeeld',2,1,'[{"minuut":18,"soort":"goal","kant":"thuis","speler":"Testspeler 1","assist":"Testspeler 2"},{"minuut":36,"soort":"goal","kant":"uit","speler":"Speler FC Test United","assist":""},{"minuut":67,"soort":"goal","kant":"thuis","speler":"Testspeler 3","assist":"Testspeler 1"},{"minuut":74,"soort":"geel","kant":"uit","speler":"Speler FC Test United","assist":""}]') on conflict do nothing;
+
+-- Handmatig een net gespeelde testmatch invullen en daarna opruimen.
+create or replace function public.controleer_testmatch(p_match_key text) returns void
+language plpgsql security definer set search_path=public as $$
+begin
+ if not is_actief() or not is_admin() or not exists(select 1 from push_config where allowed_member=my_member_id()) then raise exception 'Alleen de aangewezen testbeheerder kan testmatches beheren.'; end if;
+ if not exists(select 1 from matches where match_key=p_match_key and (bron in('test-invoer','push-test') or match_key='test-matchverslag-voorbeeld')) then raise exception 'Dit is geen verwijderbare testmatch.'; end if;
+end $$;
+create or replace function public.maak_testmatch() returns text
+language plpgsql security definer set search_path=public as $$
+declare k text:='test-invoer-'||gen_random_uuid(); aftrap timestamp:=(clock_timestamp()-interval '81 minutes') at time zone 'Europe/Brussels';
+begin
+ if not is_actief() or not is_admin() or not exists(select 1 from push_config where allowed_member=my_member_id()) then raise exception 'Alleen de aangewezen testbeheerder kan testmatches beheren.'; end if;
+ insert into matches(match_key,seizoen,reeks,datum,uur,thuis_id,uit_id,thuis,uit,status,bron,fetched_at)
+ values(k,'2026-2027','TESTMATCH',aftrap::date,to_char(aftrap,'HH24:MI'),152,9901,'Steca Juniors','FC Test United','gepland','test-invoer',now());
+ insert into attendance(match_key,member_id,status) select k,id,'aanwezig' from members where id=my_member_id() or email like 'testspeler%@example.invalid';
+ return k;
+end $$;
+create or replace function public.verwijder_testmatch(p_match_key text) returns void
+language plpgsql security definer set search_path=public as $$
+begin
+ perform controleer_testmatch(p_match_key);
+ if exists(select 1 from storage.objects where bucket_id='match-sfeerbeelden' and split_part(name,'/',1)=encode(convert_to(p_match_key,'UTF8'),'hex')) then raise exception 'Er staan nog sfeerbeelden bij deze testmatch. Probeer het verwijderen opnieuw.'; end if;
+ delete from fines where match_key=p_match_key;
+ delete from matches where match_key=p_match_key;
+end $$;
+revoke all on function public.controleer_testmatch(text),public.maak_testmatch(),public.verwijder_testmatch(text) from public,anon;
+grant execute on function public.controleer_testmatch(text),public.maak_testmatch(),public.verwijder_testmatch(text) to authenticated;
+
