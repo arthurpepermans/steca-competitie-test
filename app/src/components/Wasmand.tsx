@@ -6,30 +6,39 @@ import type { LaundryTurn, Match } from "../lib/types";
 
 type Speler = { id: string; naam: string };
 
+/** Eén truitje in de kleuren van de shirts op het veld: [x, y, draai, schaal, gespiegeld]. */
+function Truitje({ t }: { t: [number, number, number, number, boolean] }) {
+  const [x, y, r, s, flip] = t;
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${flip ? -s : s} ${s}) translate(-30 -31)`}>
+      <path d="M19 5 9 10 2 25 13 30 17 23 17 57 43 57 43 23 47 30 58 25 51 10 41 5 36 11 24 11Z" fill="#292929" stroke="#171717" strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M18 25h24v17H18Z" fill="#f8f5e9" />
+      <path d="M21 6q9 13 18 0M3 24l10 5M47 29l10-5" fill="none" stroke="#f8f5e9" strokeWidth="2.5" />
+    </g>
+  );
+}
+
+// Een hoop truitjes kriskras door elkaar: de achterste steken boven de mand uit, twee hangen over de rand.
+const TRUITJES_ACHTER: [number, number, number, number, boolean][] = [
+  [38, 60, -52, .6, false], [112, 58, 50, .6, true], [57, 46, -18, .62, false], [93, 44, 24, .62, true],
+  [75, 32, 6, .64, false], [66, 62, 88, .56, false], [86, 64, -84, .56, true], [75, 55, 172, .6, false],
+];
+const TRUITJES_VOOR: [number, number, number, number, boolean][] = [[44, 66, -64, .56, false], [107, 68, 62, .56, true]];
+
 /** Wasmand vol voetbaltruitjes, in de kleuren van de shirts op het veld. */
 export function WasmandTekening() {
-  const truitjes = [
-    { x: 22, y: 26, r: -22 }, { x: 60, y: 14, r: 6 }, { x: 98, y: 24, r: 24 }, { x: 42, y: 38, r: -8 }, { x: 80, y: 40, r: 12 },
-  ];
   return (
     <svg className="wasmand-tekening" viewBox="0 0 150 140" role="img" aria-label="Wasmand vol truitjes">
-      <g transform="translate(0 4)">
-        {truitjes.map((t, i) => (
-          <g key={i} transform={`translate(${t.x} ${t.y}) rotate(${t.r}) scale(.72)`}>
-            <path d="M19 5 9 10 2 25 13 30 17 23 17 57 43 57 43 23 47 30 58 25 51 10 41 5 36 11 24 11Z" fill="#292929" stroke="#171717" strokeWidth="2" strokeLinejoin="round" />
-            <path d="M18 25h24v17H18Z" fill="#f8f5e9" />
-            <path d="M21 6q9 13 18 0M3 24l10 5M47 29l10-5" fill="none" stroke="#f8f5e9" strokeWidth="2" />
-          </g>
-        ))}
+      {TRUITJES_ACHTER.map((t, i) => <Truitje key={i} t={t} />)}
+      {/* rieten mand */}
+      <path d="M16 70 27 134h96l11-64Z" fill="#c9a24f" stroke="#332e24" strokeWidth="3" strokeLinejoin="round" />
+      <g stroke="#8a6a2e" strokeWidth="2" fill="none" opacity=".85">
+        <path d="M22 84h106M25 98h100M28 112h94M31 126h88" />
+        <path d="M36 71l9 63M56 71l5 63M75 71v63M94 71l-5 63M114 71l-9 63" />
       </g>
-      {/* rieten mand voor de truitjes */}
-      <path d="M14 62 26 132h98l12-70Z" fill="#c9a24f" stroke="#332e24" strokeWidth="3" strokeLinejoin="round" />
-      <g stroke="#8a6a2e" strokeWidth="2" fill="none" opacity=".8">
-        <path d="M20 78h110M23 94h104M26 110h98M29 124h92" />
-        <path d="M34 63l10 69M54 63l6 69M75 63v69M96 63l-6 69M116 63l-10 69" />
-      </g>
-      <path d="M10 56h130v10H10Z" fill="#d9b565" stroke="#332e24" strokeWidth="3" strokeLinejoin="round" />
-      <path d="M40 56c0-14 70-14 70 0" fill="none" stroke="#332e24" strokeWidth="4" strokeLinecap="round" />
+      <path d="M10 64h130v10H10Z" fill="#d9b565" stroke="#332e24" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M10 69c-8 0-8 12 0 12M140 69c8 0 8 12 0 12" fill="none" stroke="#332e24" strokeWidth="3" strokeLinecap="round" />
+      {TRUITJES_VOOR.map((t, i) => <Truitje key={i} t={t} />)}
     </svg>
   );
 }
