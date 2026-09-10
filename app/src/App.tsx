@@ -12,6 +12,8 @@ import { Leden, LidDetail } from "./pages/Leden";
 import { Profiel } from "./pages/Profiel";
 import { Supporters } from "./pages/Supporters";
 import { DriveBeheer } from "./pages/DriveBeheer";
+import { MatchVerslag } from "./pages/MatchVerslag";
+import { MeldingenTest } from "./pages/MeldingenTest";
 
 function Poort() {
   const { klaar, session, lid, fout } = useAuth();
@@ -43,6 +45,8 @@ function Poort() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/kalender" element={<Kalender />} />
+        <Route path="/match/:key" element={<MatchVerslag />} />
+        <Route path="/meldingen" element={<MeldingenTest />} />
         <Route path="/klassement" element={<Klassement />} />
         <Route path="/ploegen" element={<Ploegen />} />
         <Route path="/ploegen/:id" element={<PloegDetail />} />
