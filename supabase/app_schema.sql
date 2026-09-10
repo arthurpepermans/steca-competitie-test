@@ -1159,10 +1159,13 @@ language sql stable security definer set search_path=public as $$
  and match_aftrap(m.datum,m.uur)+interval '80 minutes'<=now()
  and (r.match_key is not null or m.status='gespeeld')
  and coalesce(r.thuis_score,m.thuis_score) is not null and coalesce(r.uit_score,m.uit_score) is not null
- ), deelnemers as (select distinct p.user_id from pronostieken p join matches m using(match_key) where m.seizoen=p_seizoen)
- select d.user_id,m.naam,coalesce(sum(s.pt),0)::bigint,count(*) filter(where pt=10),count(*) filter(where pt=5),count(*) filter(where pt=3),count(s.pt)
- from deelnemers d join (select user_id,naam from members where user_id is not null union all select user_id,naam from supporter_profiles) m on m.user_id=d.user_id left join scores s on s.user_id=d.user_id
- group by d.user_id,m.naam order by 3 desc,m.naam;
+ ), deelnemers as (
+ select coalesce(m.user_id,m.id) as user_id,m.naam from members m where m.status='actief' and m.functie<>'supporter'
+ union all select sp.user_id,sp.naam from supporter_profiles sp where sp.actief
+ )
+ select d.user_id,d.naam,coalesce(sum(s.pt),0)::bigint,count(*) filter(where pt=10),count(*) filter(where pt=5),count(*) filter(where pt=3),count(s.pt)
+ from deelnemers d left join scores s on s.user_id=d.user_id
+ group by d.user_id,d.naam order by 3 desc,d.naam;
 $$;
 revoke all on function public.kantine_klassement(text) from public;
 grant execute on function public.kantine_klassement(text) to anon,authenticated;
