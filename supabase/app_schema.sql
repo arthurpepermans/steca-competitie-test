@@ -953,6 +953,7 @@ create or replace function public.push_planning() returns jsonb
 language sql stable security definer set search_path=public as $$
  select coalesce(jsonb_agg(jsonb_build_object('match_key',m.match_key,'tegenstander',case when m.thuis_id=152 then m.uit else m.thuis end,
  'aftrap',match_aftrap(m.datum,m.uur),'score_at',r.score_at,'deadline',((m.datum+8)::timestamp at time zone 'Europe/Brussels'),
+ 'thuis_score',r.thuis_score,'uit_score',r.uit_score,'steca_thuis',m.thuis_id=152,
  'antwoord',a.member_id is not null,'aanwezig',coalesce(a.status='aanwezig',false),'gestemd',v.voter_id is not null,
  'eerste_verzonden',j.sent_at,'member_id',c.allowed_member)), '[]'::jsonb)
  from push_config c join members lid on lid.id=c.allowed_member and lid.status='actief' and lid.user_id is not null
