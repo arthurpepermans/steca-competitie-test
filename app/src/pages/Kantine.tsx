@@ -17,11 +17,20 @@ export function Kantine({ openbaar=false }: { openbaar?: boolean }) {
  const {lid,supporter}=useAuth();
  const eigenaar=supporter?.user_id??(!openbaar?lid?.id:null)??"gast";
  const [params,setParams]=useSearchParams();
- const tab=params.get('spel') ?? 'dream';
- return <><h1>De Kantine</h1><p className="zacht">Jouw ideale elf. Jouw voorspelling. Jouw punten.</p>
- <div className="tabs">{[['dream','Dream XI'],['prono','Pronostieken'],['stand','Prono-klassement']].map(([k,n])=><button key={k} className={tab===k?'actief':''} onClick={()=>setParams(p=>{p.set('spel',k);return p;})}>{n}</button>)}</div>
- {tab==='dream'?<DreamXI key={eigenaar} openbaar={openbaar}/>:<Pronostieken key={tab} openbaar={openbaar} klassement={tab==='stand'}/>}</>;
+ const gevraagd=params.get('spel') ?? 'home';
+ const tab=['dream','prono','stand'].includes(gevraagd)?gevraagd:'home';
+ const open=(spel:string)=>setParams(p=>{if(spel==='home')p.delete('spel');else p.set('spel',spel);return p;});
+ return <><h1>De Kantine</h1>
+ {tab==='home'?<><p className="zacht">Kies jouw spel.</p><div className="kantine-start">
+ <button className="kaart kantine-spel" onClick={()=>open('dream')}><span className="kantine-spel-nr" aria-hidden="true">XI</span><strong>Dream XI</strong><span>Stel jouw ideale Steca-ploeg samen.</span><span className="knop">Maak jouw Dream XI →</span></button>
+ <button className="kaart kantine-spel" onClick={()=>open('prono')}><span className="kantine-spel-nr" aria-hidden="true">1–0</span><strong>Junior-Pronostieken</strong><span>Voorspel de Steca-matchen en klim in het klassement.</span><span className="knop">Naar Junior-Pronostieken →</span></button>
+ </div></>:<><p><button className="knop licht klein" onClick={()=>open('home')}>← Terug naar De Kantine</button></p>
+ {tab==='dream'?<DreamXI key={eigenaar} openbaar={openbaar}/>:<><h2>Junior-Pronostieken</h2><p>Voor de gokkers onder ons…</p>
+ <div className="tabs">{[['prono','Voorspellen'],['stand','Klassement']].map(([k,n])=><button key={k} className={tab===k?'actief':''} onClick={()=>open(k)}>{n}</button>)}</div>
+ <Pronostieken key={tab} openbaar={openbaar} klassement={tab==='stand'}/></>}</>}
+ </>;
 }
+
 function DreamXI({ openbaar }: { openbaar: boolean }) {
  const {lid,supporter}=useAuth();const ingelogd=Boolean((!openbaar && lid)||supporter?.actief);
  const spelers=useAsync(kantineSpelers);
@@ -54,7 +63,7 @@ function Pronostieken({ openbaar,klassement }: {openbaar:boolean;klassement:bool
  const rang=useAsync(()=>haalPronostiekKlassement(gekozen),[gekozen]);
  const [nu,setNu]=useState(Date.now());useEffect(()=>{const id=setInterval(()=>setNu(Date.now()),1000);return()=>clearInterval(id);},[]);
  const seizoenen=[...new Set(alle.map(m=>m.seizoen))].sort().reverse();
- return <><div className="kaart"><h2>{klassement?'Prono-klassement':'Voorspel de Steca-matchen'}</h2><p><strong>10</strong> exacte score · <strong>5</strong> juist doelpuntenverschil (ook gelijkspel) · <strong>3</strong> juiste winnaar · <strong>0</strong> verkeerd.</p><p className="zacht klein">Alleen de hoogste score telt. 2–0 voorspeld en 4–2 gespeeld = 5 punten. 1–1 voorspeld en 2–2 gespeeld = 5. Invoer sluit bij de aftrap. Punten vanaf 80 minuten na aftrap zodra er een uitslag is; correcties worden herberekend. Bij gelijke punten deel je dezelfde plaats.</p></div>
+ return <><div className="kaart"><h2>{klassement?'Prono-klassement':'Zo scoor je punten'}</h2><p><strong>10</strong> exacte score · <strong>5</strong> juist doelpuntenverschil (ook gelijkspel) · <strong>3</strong> juiste winnaar · <strong>0</strong> verkeerd.</p><p className="zacht klein">Alleen de hoogste score telt. 2–0 voorspeld en 4–2 gespeeld = 5 punten. 1–1 voorspeld en 2–2 gespeeld = 5. Invoer sluit bij de aftrap. Punten vanaf 80 minuten na aftrap zodra er een uitslag is; correcties worden herberekend. Bij gelijke punten deel je dezelfde plaats.</p></div>
  {!kanSpelen&&!klassement&&<div className="melding">Om punten te verzamelen heb je een actief clubaccount nodig. Als supporter kun je het klassement bekijken en Dream XI proberen. <Link to="/supporter-account">Maak een supporteraccount</Link> of <Link to="/login">log in</Link>.</div>}
  <label>Seizoen <select value={gekozen} onChange={e=>setSeizoen(e.target.value)}>{(seizoenen.length?seizoenen:[gekozen]).map(s=><option key={s}>{s}</option>)}</select></label>
  <Fout tekst={info.fout??eigen.fout??rang.fout}/>{(info.laden||eigen.laden||rang.laden)&&<Laden/>}

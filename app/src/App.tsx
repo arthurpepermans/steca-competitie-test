@@ -36,7 +36,7 @@ function Poort() {
   }
   if (locatie.pathname === "/nieuw-wachtwoord") return <NieuwWachtwoord />;
   if (fout) return <Geblokkeerd tekst={`Je gegevens konden niet geladen worden: ${fout}`} />;
-  if (supporter) return supporter.actief ? <Navigate to="/supporters?tab=Kantine&spel=prono" replace /> : <Geblokkeerd tekst="Dit supporteraccount is gedeactiveerd." />;
+  if (supporter) return supporter.actief ? <Navigate to="/supporters?tab=Kantine" replace /> : <Geblokkeerd tekst="Dit supporteraccount is gedeactiveerd." />;
   if (!lid) return <Geblokkeerd tekst="Er is geen lid gekoppeld aan dit account. Vraag een beheerder om hulp." />;
   if (lid.status === "wacht_op_goedkeuring") return <WachtOpGoedkeuring />;
   if (lid.status === "inactief") return <Geblokkeerd tekst="Dit account is gedeactiveerd. Vraag een beheerder om het opnieuw te activeren." />;
