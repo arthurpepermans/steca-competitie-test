@@ -1025,3 +1025,23 @@ end $$;
 revoke all on function public.controleer_testmatch(text),public.maak_testmatch(),public.verwijder_testmatch(text) from public,anon;
 grant execute on function public.controleer_testmatch(text),public.maak_testmatch(),public.verwijder_testmatch(text) to authenticated;
 
+-- Alleen de wachttijd van een bestaande testmatch simuleren; nooit een nieuwe uitslag maken.
+create or replace function public.simuleer_testherinnering(p_match_key text) returns void
+language plpgsql security definer set search_path=public as $$
+declare lid uuid:=my_member_id();
+begin
+ perform controleer_testmatch(p_match_key);
+ perform pg_advisory_xact_lock(hashtextextended('testherinnering:'||p_match_key,0));
+ if not exists(select 1 from match_reports where match_key=p_match_key) then raise exception 'Vul eerst de uitslag van deze testmatch in.'; end if;
+ if not exists(select 1 from matches where match_key=p_match_key and match_aftrap(datum,uur)<=now()-interval '80 minutes' and datum>=(now() at time zone 'Europe/Brussels')::date-7) then raise exception 'Deze testmatch valt buiten de stemperiode.'; end if;
+ if not exists(select 1 from attendance where match_key=p_match_key and member_id=lid and status='aanwezig') then raise exception 'Je moet aanwezig staan bij deze testmatch.'; end if;
+ if exists(select 1 from match_votes where match_key=p_match_key and voter_id=lid) then raise exception 'Je hebt al gestemd voor deze testmatch. Trek je teststem eerst in.'; end if;
+ if not exists(select 1 from push_jobs where match_key=p_match_key and member_id=lid and soort='stemmen' and status='sent' and sent_at is not null) then raise exception 'Laat eerst de eerste stemmelding voor deze testmatch versturen.'; end if;
+ if exists(select 1 from push_jobs where match_key=p_match_key and member_id=lid and status='sending' and lease_until>now()) then raise exception 'Deze melding wordt momenteel verstuurd. Wacht even.'; end if;
+ update push_jobs set sent_at=least(sent_at,now()-interval '3 hours 1 minute'),fout='Test: drie uur wachttijd gesimuleerd voor dezelfde wedstrijd.' where match_key=p_match_key and member_id=lid and soort='stemmen';
+ insert into push_jobs(match_key,member_id,soort) values(p_match_key,lid,'stemherinnering')
+ on conflict(match_key,member_id,soort) do update set status='pending',sent_at=null,lease_until=null,attempts=0,next_attempt=now(),fout=null;
+end $$;
+revoke all on function public.simuleer_testherinnering(text) from public,anon;
+grant execute on function public.simuleer_testherinnering(text) to authenticated;
+

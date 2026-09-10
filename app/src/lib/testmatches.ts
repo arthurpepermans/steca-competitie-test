@@ -17,3 +17,8 @@ export async function verwijderTestmatch(matchKey:string) {
   const {error}=await supabase.rpc('verwijder_testmatch',{p_match_key:matchKey});
   if(error) throw error;
 }
+
+export async function simuleerTestherinnering(matchKey:string) {
+  const {error}=await supabase.rpc('simuleer_testherinnering',{p_match_key:matchKey});
+  if(error) throw error;
+}
