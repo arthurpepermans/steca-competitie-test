@@ -57,3 +57,16 @@ describe('meldmomenten',()=>{
     expect(verschuldigd({...basis,antwoord:true,aanwezig:true,scoreAt:aftrap},basis.deadline+1)).toEqual([]);
   });
 });
+
+describe('wasmand', () => {
+  const basis = { scoreAt: null, antwoord: true, aanwezig: true, gestemd: false, eersteVerzonden: null };
+  const aftrap = Date.parse('2026-09-12T13:00:00Z');
+  const deadline = aftrap + 8 * 24 * 3600000;
+  it('meldt KUISVROUW vanaf 100 minuten na de aftrap, alleen voor wie de mand meeneemt', () => {
+    expect(verschuldigd({ ...basis, aftrap, deadline, wasmand: true }, aftrap + 99 * 60000)).toEqual([]);
+    expect(verschuldigd({ ...basis, aftrap, deadline, wasmand: true }, aftrap + 100 * 60000)).toEqual(['wasmand']);
+    expect(verschuldigd({ ...basis, aftrap, deadline, wasmand: false }, aftrap + 100 * 60000)).toEqual([]);
+    expect(verschuldigd({ ...basis, aftrap, deadline, wasmand: true }, aftrap + 25 * 3600000)).toEqual([]);
+    expect(bericht('wasmand', 'FC Patron')).toEqual({ title: 'KUISVROUW', body: 'De was is voor jou, vergeet de mand niet mee te pakken! Veel succes!' });
+  });
+});
