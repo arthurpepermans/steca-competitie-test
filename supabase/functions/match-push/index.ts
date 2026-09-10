@@ -47,14 +47,15 @@ async function verzendRij(config: any, matchKey?: string) {
 }
 async function scenario(soort: string, memberId: string) {
   if (soort==='stemherinnering') throw new Fout('Kies een bestaande testmatch bij Herinnering voor jouw testmatch. Herlaad de testapp als je die keuze nog niet ziet.');
-  if (!['aanwezig72','aanwezig48','vroeg','stemmen','stemherinnering','ingevuld','gestemd'].includes(soort)) throw new Fout('Onbekend testscenario.');
+  if (!['aanwezig72','aanwezig48','vroeg','stemmen','stemherinnering','ingevuld','gestemd','wasmand'].includes(soort)) throw new Fout('Onbekend testscenario.');
   const recent = await db.from('matches').select('match_key',{count:'exact',head:true}).eq('bron','push-test').gt('fetched_at',new Date(Date.now()-60000).toISOString());
   if ((recent.count ?? 0)>=8) throw new Fout('Wacht even voor je een nieuw scenario start.',429);
-  const uren = soort==='aanwezig72' ? 71.99 : ['aanwezig48','ingevuld'].includes(soort) ? 47.99 : soort==='vroeg' ? -.5 : soort==='stemherinnering' ? -5 : -1.35;
+  const uren = soort==='wasmand' ? -101/60 : soort==='aanwezig72' ? 71.99 : ['aanwezig48','ingevuld'].includes(soort) ? 47.99 : soort==='vroeg' ? -.5 : soort==='stemherinnering' ? -5 : -1.35;
   const aftrap = new Date(Date.now()+uren*3600000);
   const delen = new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(aftrap).split(' ');
   const key = 'push-test-'+crypto.randomUUID();
   check(await db.from('matches').insert({match_key:key,seizoen:'2026-2027',reeks:'TESTMATCH',datum:delen[0],uur:delen[1],thuis_id:152,uit_id:9901,thuis:'Steca Juniors',uit:'FC Test United',status:'gepland',bron:'push-test',fetched_at:new Date().toISOString(),terrein:'Testterrein'}));
+  if (soort==='wasmand') check(await db.from('laundry_turns').insert({match_key:key,member_id:memberId,ingevoerd_door:memberId}));
   const spelers = check(await db.from('members').select('id').like('email','testspeler%@example.invalid').limit(4)) ?? [];
   const isStem = ['vroeg','stemmen','stemherinnering','gestemd'].includes(soort);
   if (isStem || soort==='ingevuld') check(await db.from('attendance').upsert([{match_key:key,member_id:memberId,status:'aanwezig'},...spelers.map(m=>({match_key:key,member_id:m.id,status:'aanwezig'}))]));
@@ -100,11 +101,11 @@ Deno.serve(async req => {
       // Daardoor blijven verslagen en sfeerbeelden staan en komen er geen latere herinneringen.
       for (const m of matches) {
         check(await db.from('attendance').upsert({match_key:m.match_key,member_id:lid.id,status:'afwezig'}));
-        for (const soort of ['aanwezig72','aanwezig48','stemmen','stemherinnering']) check(await db.from('push_jobs').upsert({match_key:m.match_key,member_id:lid.id,soort,status:'skipped',fout:'Testscenario gestopt.'},{onConflict:'match_key,member_id,soort'}));
+        for (const soort of ['aanwezig72','aanwezig48','stemmen','stemherinnering','wasmand']) check(await db.from('push_jobs').upsert({match_key:m.match_key,member_id:lid.id,soort,status:'skipped',fout:'Testscenario gestopt.'},{onConflict:'match_key,member_id,soort'}));
       }
       return json({ok:true});
     }
-    if (body.action==='scenario') { const matchKey=await scenario(body.scenario,lid.id); return json({matchKey,...await verzendRij(config)}); }
+    if (body.action==='scenario') { const matchKey=await scenario(body.scenario,lid.id); return json({matchKey,...await verzendRij(config,matchKey)}); }
     if (body.action==='run') return json(await verzendRij(config,typeof body.matchKey==='string' ? body.matchKey : undefined));
     throw new Fout('Onbekende actie.');
   } catch(e) { return json({error:e instanceof Fout ? e.message : 'Meldingen verwerken mislukt. Probeer opnieuw.'},e instanceof Fout ? e.status : 500); }
