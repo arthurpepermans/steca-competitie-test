@@ -9,6 +9,7 @@ import { foutTekst, useAsync } from '../lib/useAsync';
 import { Fout, Laden } from '../components/Layout';
 
 const scenarios = [
+  ['wasmand','Wasmandmelding testen','Maakt een aparte testmatch die 101 minuten geleden begon en duidt jou aan voor de wasmand. Verwacht: TEST · KUISVROUW.'],
   ['aanwezig72','72 uur: nog niet ingevuld','Verwacht: een herinnering voor je aanwezigheid.'],
   ['aanwezig48','48 uur: nog niet ingevuld','Verwacht: de tweede aanwezigheidsherinnering.'],
   ['ingevuld','Aanwezigheid al ingevuld','Verwacht: géén herinnering.'],
