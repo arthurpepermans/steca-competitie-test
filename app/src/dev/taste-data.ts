@@ -46,15 +46,17 @@ export function installeerTestgegevens() {
     if (url.pathname === "/storage/v1/object/list/match-sfeerbeelden") return antwoord([]);
     if (!url.pathname.startsWith("/rest/v1/")) return antwoord({ message: "Dit ontwerpvoorbeeld gebruikt geen echte accounts." }, 400);
     const tabel = url.pathname.slice("/rest/v1/".length);
+    if (tabel === 'match_reports') return antwoord([{match_key:matches[0].match_key,thuis_score:1,uit_score:2,updated_at:'2026-09-10T07:00:00Z',score_at:'2026-09-10T07:00:00Z',momenten:[{minuut:18,soort:'goal',kant:'uit',speler:'Bram Hendrickx',assist:'Florian Goossens'},{minuut:36,soort:'goal',kant:'thuis',speler:'Speler FC Patron',assist:''},{minuut:67,soort:'goal',kant:'uit',speler:'Lennert De Clercq',assist:'Bram Hendrickx'},{minuut:74,soort:'geel',kant:'thuis',speler:'Speler FC Patron',assist:''}]}]);
     if (request.method !== "GET") {
-      if (tabel === "rpc/bewaar_opstelling" && request.method === "POST") {
+      if ((tabel === "rpc/bewaar_opstelling" || tabel === "rpc/bewaar_opstelling_met_slotjes" || tabel === "rpc/bewaar_opstelling_auto") && request.method === "POST") {
         const waarde = await request.json();
+        if (tabel === "rpc/bewaar_opstelling_auto" && (voorbeeldLineups.find(l => l.match_key === waarde.p_match_key)?.updated_at ?? null) !== waarde.p_verwacht) return antwoord({ message: "Deze opstelling is ondertussen gewijzigd. Herlaad de nieuwste opstelling." }, 409);
         const keuzes = Object.entries(waarde.p_keuze as Record<string, string | null>).filter(([, id]) => id);
         if (keuzes.some(([, id]) => !aanwezigheden.some((a) => a.match_key === waarde.p_match_key && a.member_id === id && a.status === "aanwezig"))) return antwoord({ message: "Alleen aanwezige spelers kunnen opgesteld worden." }, 400);
         const rij: Lineup = { id: voorbeeldLineups.find((l) => l.match_key === waarde.p_match_key)?.id ?? "voorbeeld-" + waarde.p_match_key, match_key: waarde.p_match_key, formatie: waarde.p_formatie, gemaakt_door: null, updated_at: new Date().toISOString() };
         voorbeeldLineups = [...voorbeeldLineups.filter((l) => l.id !== rij.id), rij];
-        voorbeeldOpstelling = [...voorbeeldOpstelling.filter((p) => p.lineup_id !== rij.id), ...keuzes.map(([positie, id]) => ({ lineup_id: rij.id, positie, member_id: id! }))];
-        return antwoord(null);
+        voorbeeldOpstelling = [...voorbeeldOpstelling.filter((p) => p.lineup_id !== rij.id), ...keuzes.map(([positie, id]) => ({ lineup_id: rij.id, positie, member_id: id!, vergrendeld: (waarde.p_slotjes ?? []).includes(positie) }))];
+        return antwoord(tabel === "rpc/bewaar_opstelling_auto" ? rij : null);
       }
       if (tabel === "lineups" && request.method === "POST") {
         const waarde = await request.json();

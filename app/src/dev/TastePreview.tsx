@@ -11,6 +11,7 @@ import { Opstelling } from "../pages/Opstelling";
 import { Ploegen, PloegDetail } from "../pages/Ploegen";
 import { Leden, LidDetail } from "../pages/Leden";
 import { Profiel } from "../pages/Profiel";
+import { MatchVerslag } from "../pages/MatchVerslag";
 import { voorbeeldLid } from "./taste-data";
 import "../styles.css";
 
@@ -22,6 +23,7 @@ createRoot(document.getElementById("root")!).render(
       <HashRouter><Routes><Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/kalender" element={<Kalender />} />
+        <Route path="/match/:key" element={<MatchVerslag />} />
         <Route path="/klassement" element={<Klassement />} />
         <Route path="/opstelling" element={<Opstelling />} />
         <Route path="/ploegen" element={<Ploegen />} />

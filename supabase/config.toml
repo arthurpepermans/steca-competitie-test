@@ -1,3 +1,7 @@
 [functions.drive-connect]
 # Google-callback heeft geen Supabase-JWT. POST-acties controleren auth en adminrecht zelf.
 verify_jwt = false
+
+[functions.match-push]
+# De functie controleert gebruikers-JWT of het geheime crontoken zelf.
+verify_jwt = false
