@@ -20,9 +20,11 @@ export async function zetMeldingenAan(publicKey: string) {
   const bytes = Uint8Array.from(atob(publicKey.replaceAll('-','+').replaceAll('_','/')), c=>c.charCodeAt(0));
   const sub = await reg.pushManager.getSubscription() ?? await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});
   await pushActie('subscribe',{subscription:sub.toJSON()});
+  try { localStorage.removeItem('steca-meldingen-uit'); } catch { /* Optionele voorkeur. */ }
 }
 export async function zetMeldingenUit() {
   const reg = await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);
   const sub = await reg?.pushManager.getSubscription();
   if (sub) { await pushActie('unsubscribe',{endpoint:sub.endpoint}); await sub.unsubscribe(); }
+  try { localStorage.setItem('steca-meldingen-uit','1'); } catch { /* Optionele voorkeur. */ }
 }

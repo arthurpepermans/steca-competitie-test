@@ -375,3 +375,7 @@ html,body,#root{touch-action:pan-x pan-y}
 
 /* Spelersstatistieken op het profiel: elke tegel met een streepje links, ook de eerste. */
 .speler-cijfers > div { border-left: 1px solid var(--rand); padding-left: 14px; }
+.meldingen-popup { width: min(440px, calc(100% - 32px)); max-height: 85dvh; overflow: auto; padding: 26px; border: 2px solid var(--tekst); color: var(--tekst); background: var(--kaart); box-shadow: 7px 7px 0 #0003; }
+.meldingen-popup::backdrop { background: #171a17a6; }
+.meldingen-popup h2 { margin-top: 12px; }
+.meldingen-popup .knoppen { margin-top: 24px; }

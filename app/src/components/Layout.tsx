@@ -10,6 +10,7 @@ import { Moon } from "@phosphor-icons/react/dist/csr/Moon";
 import { Sun } from "@phosphor-icons/react/dist/csr/Sun";
 import { useAuth } from "../lib/auth";
 import { NieuweVersie } from "./NieuweVersie";
+import { MeldingenPopup } from './MeldingenPopup';
 import { useNavViewport } from "../lib/useNavViewport";
 
 const TABS = [
@@ -56,6 +57,7 @@ export function Layout() {
         </div>
       </header>
       <main id="inhoud" className="inhoud" tabIndex={-1}><NieuweVersie /><Outlet /></main>
+      <MeldingenPopup />
       <nav ref={navRef} className="nav" aria-label="Hoofdnavigatie">
         {TABS.map(({ to, label, Icon }) => (
           <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => isActive ? "actief" : ""}>
