@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { maakTestmatch } from '../lib/testmatches';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { haalMatches } from '../lib/api';
+import { haalVerslagen } from '../lib/matchverslag';
+import { maakTestmatch, simuleerTestherinnering } from '../lib/testmatches';
 import { pushActie, pushOndersteund, zetMeldingenAan, zetMeldingenUit, type PushStatus } from '../lib/push';
 import { foutTekst, useAsync } from '../lib/useAsync';
 import { Fout, Laden } from '../components/Layout';
@@ -11,12 +13,16 @@ const scenarios = [
   ['ingevuld','Aanwezigheid al ingevuld','Verwacht: géén herinnering.'],
   ['vroeg','Score vóór 80 minuten','Verwacht: nu géén melding, later wel vanaf 80 minuten.'],
   ['stemmen','Score na 80 minuten','Verwacht: uitnodiging voor Junior van de match.'],
-  ['stemherinnering','Drie uur later, nog geen stem','Verwacht: herinnering om te stemmen.'],
   ['gestemd','Stem al uitgebracht','Verwacht: géén stemherinnering.'],
 ];
 export function MeldingenTest() {
   const navigate=useNavigate();
-  const info = useAsync(() => pushActie<PushStatus>('status'));
+  const [params,setParams] = useSearchParams();
+  const gekozen = params.get('match') ?? '';
+  const info = useAsync(async () => {
+    const [status,matches,verslagen] = await Promise.all([pushActie<PushStatus>('status'),haalMatches(),haalVerslagen()]);
+    return {...status,testmatches:matches.filter(m => /^(test-invoer-|push-test-)/.test(m.match_key)).map(m => ({...m,verslag:verslagen.find(v => v.match_key===m.match_key)}))};
+  });
   const [fout,setFout] = useState('');
   const [melding,setMelding] = useState('');
   const [bezig,setBezig] = useState(false);
@@ -35,14 +41,21 @@ export function MeldingenTest() {
         {!info.data.enabled && <p className="melding waarschuwing">Verzending staat nog uit op de server.</p>}
       </section>
       <section className="kaart"><h2>Zelf een testmatch invullen</h2><p>Maak een wedstrijd alsof ze net gespeeld is. Vul zelf de uitslag, goals en assists in. Bij het opslaan kan de stemmelding naar jouw testaccount vertrekken.</p><button className="knop" disabled={bezig} onClick={()=>doe(async()=>{const key=await maakTestmatch();navigate(`/match/${encodeURIComponent(key)}?invullen=1`);},'Testmatch aangemaakt.')}>Gespeelde testmatch aanmaken</button><p className="klein zacht">Je kunt de testmatch daarna weer verwijderen via het matchverslag.</p></section>
-      <section className="kaart"><h2>Een match nabootsen</h2><p>Elke knop maakt een nieuwe fictieve match met het gekozen tijdstip. Je echte wedstrijden veranderen niet. Alle meldingen beginnen met TEST.</p>
+      <section className="kaart"><h2>Herinnering voor jouw testmatch</h2>
+        <p>Kies de match waarvoor je de eerste stemmelding al hebt ontvangen. Deze knop simuleert drie uur wachten en gebruikt dezelfde match en uitslag.</p>
+        <label>Testmatch<select value={gekozen} onChange={e=>setParams(e.target.value ? {match:e.target.value} : {})}><option value="">Kies jouw testmatch</option>{info.data.testmatches.map(m=><option key={m.match_key} value={m.match_key}>{m.datum} {m.uur} · {m.thuis} {m.verslag ? `${m.verslag.thuis_score}-${m.verslag.uit_score}` : '(nog geen uitslag)'} {m.uit} · {m.match_key.slice(-6)}</option>)}</select></label>
+        {gekozen && <p><Link to={`/match/${encodeURIComponent(gekozen)}`}>Bekijk deze match en uitslag</Link></p>}
+        <p><button className="knop licht" disabled={bezig || !gekozen} onClick={()=>doe(()=>pushActie('run',{matchKey:gekozen}),'De planning voor deze match is gecontroleerd. Er is geen nieuwe match gemaakt.')}>Eerste stemmelding controleren voor deze match</button></p>
+        <button className="knop" disabled={bezig || !info.data.testmatches.some(m=>m.match_key===gekozen && m.verslag)} onClick={()=>doe(async()=>{await simuleerTestherinnering(gekozen);await pushActie('run',{matchKey:gekozen});},'De herinnering voor deze testmatch is klaargezet. Controleer het verzendoverzicht. Er is geen nieuwe match gemaakt.')}>Herinnering na 3 uur testen voor deze match</button>
+      </section>
+      <section className="kaart"><h2>Nieuwe voorbeeldmatch maken</h2><p>Elke knop maakt een nieuwe fictieve match met het gekozen tijdstip. Je echte wedstrijden veranderen niet. Alle meldingen beginnen met TEST.</p>
         <div className="test-scenario-lijst">{scenarios.map(([code,titel,uitleg])=><div className="test-scenario" key={code}><button className="knop licht" disabled={bezig} onClick={()=>doe(async()=>{const r=await pushActie<{matchKey:string;verzonden:number}>('scenario',{scenario:code});setMatchKey(r.matchKey);},'Testmatch aangemaakt. Controleer de melding en het verzendoverzicht.')}>{titel}</button><p className="klein zacht">{uitleg}</p></div>)}</div>
         {matchKey && <p><Link className="knop" to={`/match/${encodeURIComponent(matchKey)}`}>Open het testmatchverslag</Link></p>}
         <p><button className="knop licht klein" disabled={bezig} onClick={()=>doe(()=>pushActie('stop-tests'),'De bestaande testscenario’s zijn gestopt. Je krijgt daarvoor geen volgende herinneringen.')}>Bestaande testscenario’s stoppen</button></p>
       </section>
       <section className="kaart"><h2>Verzendoverzicht</h2><p className="klein zacht">Verzonden betekent dat de pushdienst de melding heeft aangenomen. De instellingen en verbinding van je telefoon bepalen wanneer je ze ziet.</p><button className="knop licht klein" disabled={bezig} onClick={()=>doe(()=>pushActie('run'),'Planning gecontroleerd.')}>Planning nu controleren</button>
         {!info.data.jobs.length && <p>Nog geen meldingen ingepland.</p>}
-        <ul className="lijst">{info.data.jobs.map(j=><li key={j.match_key+j.soort}><Link to={`/match/${encodeURIComponent(j.match_key)}`}>{scenarios.find(s=>s[0]===j.soort)?.[1] ?? j.soort}</Link><strong> · {({sent:'Verzonden',pending:'Wacht op verzending',sending:'Wordt verzonden',skipped:'Niet meer nodig'} as Record<string,string>)[j.status]}</strong>{j.sent_at && <small> · {new Date(j.sent_at).toLocaleString('nl-BE')}</small>}{j.fout && <p className="klein zacht">{j.fout}</p>}</li>)}</ul>
+        <ul className="lijst">{info.data.jobs.map(j=><li key={j.match_key+j.soort}><Link to={`/match/${encodeURIComponent(j.match_key)}`}>{scenarios.find(s=>s[0]===j.soort)?.[1] ?? (j.soort==='stemherinnering' ? 'Stemherinnering na drie uur' : j.soort)}</Link><strong> · {({sent:'Verzonden',pending:'Wacht op verzending',sending:'Wordt verzonden',skipped:'Niet meer nodig'} as Record<string,string>)[j.status]}</strong>{j.sent_at && <small> · {new Date(j.sent_at).toLocaleString('nl-BE')}</small>}{j.fout && <p className="klein zacht">{j.fout}</p>}</li>)}</ul>
       </section>
     </>}
   </>;

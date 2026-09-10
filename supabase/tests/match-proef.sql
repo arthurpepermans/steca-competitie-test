@@ -31,6 +31,20 @@ begin
  nieuw:=maak_testmatch();
  if (select match_aftrap(datum,uur) from matches where match_key=nieuw)>now()-interval '80 minutes' then raise exception 'Testmatch niet verstreken'; end if;
  perform bewaar_matchverslag(nieuw,2,1,'[]',null);
+ -- Eerst bewust een nederlaag; de herinneringsproef moet dezelfde match en score behouden.
+ select updated_at into versie from match_reports where match_key=nieuw;
+ perform bewaar_matchverslag(nieuw,0,3,'[]',versie);
+ geweigerd:=false;
+ begin perform simuleer_testherinnering(nieuw); exception when others then geweigerd:=true; end;
+ if not geweigerd then raise exception 'Herinnering zonder eerste melding toegestaan'; end if;
+ insert into push_jobs(match_key,member_id,soort,status,sent_at) values(nieuw,lid,'stemmen','sent',now());
+ perform simuleer_testherinnering(nieuw);
+ if not exists(select 1 from match_reports where match_key=nieuw and thuis_score=0 and uit_score=3) then raise exception 'Herinnering veranderde de uitslag'; end if;
+ if not exists(select 1 from push_jobs where match_key=nieuw and member_id=lid and soort='stemherinnering' and status='pending') then raise exception 'Herinnering niet bij dezelfde match'; end if;
+ if not exists(select 1 from push_jobs where match_key=nieuw and member_id=lid and soort='stemmen' and sent_at<=now()-interval '3 hours') then raise exception 'Wachttijd niet gesimuleerd'; end if;
+ geweigerd:=false;
+ begin perform simuleer_testherinnering(key); exception when others then geweigerd:=true; end;
+ if not geweigerd then raise exception 'Andere wedstrijd kon als test worden aangepast'; end if;
  perform verwijder_testmatch(nieuw);
  if exists(select 1 from matches where match_key=nieuw) or exists(select 1 from match_reports where match_key=nieuw) or exists(select 1 from attendance where match_key=nieuw) then raise exception 'Testmatch niet volledig verwijderd'; end if;
  geweigerd:=false;

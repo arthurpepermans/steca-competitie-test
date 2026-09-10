@@ -16,10 +16,12 @@ function abonnement(s: any) {
 type Planning = Uitslag & { match_key: string; member_id: string; tegenstander: string; aftrap: string | null; score_at: string | null; deadline: string; antwoord: boolean; aanwezig: boolean; gestemd: boolean; eerste_verzonden: string | null };
 function soorten(p: Planning) { return verschuldigd({ aftrap: p.aftrap ? Date.parse(p.aftrap) : NaN, scoreAt: p.score_at ? Date.parse(p.score_at) : null, deadline: Date.parse(p.deadline), antwoord:p.antwoord, aanwezig:p.aanwezig, gestemd:p.gestemd, eersteVerzonden:p.eerste_verzonden ? Date.parse(p.eerste_verzonden) : null }, Date.now()); }
 async function planning(): Promise<Planning[]> { return check(await db.rpc('push_planning')); }
-async function verzendRij(config: any) {
+async function verzendRij(config: any, matchKey?: string) {
   if (!config.enabled || !config.allowed_member || !config.vapid_private) return { verzonden:0 };
-  for (const p of await planning()) for (const soort of soorten(p)) check(await db.from('push_jobs').upsert({ match_key:p.match_key, member_id:p.member_id, soort }, { onConflict:'match_key,member_id,soort', ignoreDuplicates:true }));
-  const jobs = check(await db.from('push_jobs').select('*').eq('member_id',config.allowed_member).in('status',['pending','sending']).order('created_at').limit(40)) ?? [];
+  for (const p of (await planning()).filter(p=>!matchKey || p.match_key===matchKey)) for (const soort of soorten(p)) check(await db.from('push_jobs').upsert({ match_key:p.match_key, member_id:p.member_id, soort }, { onConflict:'match_key,member_id,soort', ignoreDuplicates:true }));
+  let query = db.from('push_jobs').select('*').eq('member_id',config.allowed_member).in('status',['pending','sending']).order('created_at');
+  if (matchKey) query=query.eq('match_key',matchKey);
+  const jobs = check(await query.limit(40)) ?? [];
   let verzonden = 0;
   for (const j of jobs) {
     if (!check(await db.rpc('claim_push_job',{p_id:j.id}))) continue;
@@ -44,6 +46,7 @@ async function verzendRij(config: any) {
   return {verzonden};
 }
 async function scenario(soort: string, memberId: string) {
+  if (soort==='stemherinnering') throw new Fout('Kies een bestaande testmatch bij Herinnering voor jouw testmatch. Herlaad de testapp als je die keuze nog niet ziet.');
   if (!['aanwezig72','aanwezig48','vroeg','stemmen','stemherinnering','ingevuld','gestemd'].includes(soort)) throw new Fout('Onbekend testscenario.');
   const recent = await db.from('matches').select('match_key',{count:'exact',head:true}).eq('bron','push-test').gt('fetched_at',new Date(Date.now()-60000).toISOString());
   if ((recent.count ?? 0)>=8) throw new Fout('Wacht even voor je een nieuw scenario start.',429);
@@ -102,7 +105,7 @@ Deno.serve(async req => {
       return json({ok:true});
     }
     if (body.action==='scenario') { const matchKey=await scenario(body.scenario,lid.id); return json({matchKey,...await verzendRij(config)}); }
-    if (body.action==='run') return json(await verzendRij(config));
+    if (body.action==='run') return json(await verzendRij(config,typeof body.matchKey==='string' ? body.matchKey : undefined));
     throw new Fout('Onbekende actie.');
   } catch(e) { return json({error:e instanceof Fout ? e.message : 'Meldingen verwerken mislukt. Probeer opnieuw.'},e instanceof Fout ? e.status : 500); }
 });
