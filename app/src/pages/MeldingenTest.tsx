@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { haalMatches } from '../lib/api';
 import { haalVerslagen } from '../lib/matchverslag';
-import { maakTestmatch, simuleerTestherinnering } from '../lib/testmatches';
+import { haalTestmatchSleutels, maakTestmatch, simuleerTestherinnering, verwijderAlleTestmatches } from '../lib/testmatches';
+import { rechten, useAuth } from '../lib/auth';
 import { pushActie, pushOndersteund, zetMeldingenAan, zetMeldingenUit, type PushStatus } from '../lib/push';
 import { foutTekst, useAsync } from '../lib/useAsync';
 import { Fout, Laden } from '../components/Layout';
@@ -16,17 +17,32 @@ const scenarios = [
   ['gestemd','Stem al uitgebracht','Verwacht: géén stemherinnering.'],
 ];
 export function MeldingenTest() {
+  const {lid}=useAuth();
   const navigate=useNavigate();
   const [params,setParams] = useSearchParams();
   const gekozen = params.get('match') ?? '';
   const info = useAsync(async () => {
-    const [status,matches,verslagen] = await Promise.all([pushActie<PushStatus>('status'),haalMatches(),haalVerslagen()]);
-    return {...status,testmatches:matches.filter(m => /^(test-invoer-|push-test-)/.test(m.match_key)).map(m => ({...m,verslag:verslagen.find(v => v.match_key===m.match_key)}))};
+    const [status,matches,verslagen,sleutels] = await Promise.all([pushActie<PushStatus>('status'),haalMatches(),haalVerslagen(),haalTestmatchSleutels()]);
+    return {...status,sleutels,testmatches:matches.filter(m => sleutels.includes(m.match_key)).map(m => ({...m,verslag:verslagen.find(v => v.match_key===m.match_key)}))};
   });
   const [fout,setFout] = useState('');
   const [melding,setMelding] = useState('');
   const [bezig,setBezig] = useState(false);
   const [matchKey,setMatchKey] = useState('');
+  const [voortgang,setVoortgang] = useState('');
+  async function wisAlles() {
+    const sleutels=info.data?.sleutels ?? [];
+    if(!sleutels.length || !confirm(`Alle ${sleutels.length} testmatches verwijderen? Ook hun verslagen, stemmen, opstellingen, meldingen en sfeerbeelden worden verwijderd. Dit kun je niet ongedaan maken.`)) return;
+    setBezig(true);setFout('');setMelding('');setVoortgang(`0 van ${sleutels.length} verwerkt`);
+    try {
+      const resultaat=await verwijderAlleTestmatches(sleutels,(klaar,totaal)=>setVoortgang(`${klaar} van ${totaal} verwerkt`));
+      setParams({});setMatchKey('');
+      setMelding(`${resultaat.verwijderd} testmatches verwijderd.`);
+      if(resultaat.mislukt.length) setFout(`${resultaat.mislukt.length} testmatches konden niet volledig verwijderd worden. Probeer de knop opnieuw om de resterende matches op te ruimen.`);
+      await info.herlaad();
+    } catch(e) {setFout(foutTekst(e));}
+    finally {setBezig(false);setVoortgang('');}
+  }
   async function doe(f: () => Promise<unknown>, tekst:string) { setBezig(true);setFout('');setMelding('');try { await f();setMelding(tekst);await info.herlaad(); }catch(e){setFout(foutTekst(e));}finally{setBezig(false);} }
   if(info.laden) return <Laden />;
   return <>
@@ -57,6 +73,7 @@ export function MeldingenTest() {
         {!info.data.jobs.length && <p>Nog geen meldingen ingepland.</p>}
         <ul className="lijst">{info.data.jobs.map(j=><li key={j.match_key+j.soort}><Link to={`/match/${encodeURIComponent(j.match_key)}`}>{scenarios.find(s=>s[0]===j.soort)?.[1] ?? (j.soort==='stemherinnering' ? 'Stemherinnering na drie uur' : j.soort)}</Link><strong> · {({sent:'Verzonden',pending:'Wacht op verzending',sending:'Wordt verzonden',skipped:'Niet meer nodig'} as Record<string,string>)[j.status]}</strong>{j.sent_at && <small> · {new Date(j.sent_at).toLocaleString('nl-BE')}</small>}{j.fout && <p className="klein zacht">{j.fout}</p>}</li>)}</ul>
       </section>
+      {rechten(lid).isAdmin && <section className="kaart"><h2>Testmatches opruimen</h2><p>{info.data.sleutels.length} testmatches. Je verwijdert ze samen met hun verslagen, stemmen, opstellingen, meldingen en sfeerbeelden.</p><button className="knop licht" disabled={bezig || !info.data.sleutels.length} onClick={wisAlles}>Alle testmatches verwijderen</button>{voortgang && <p role="status">{voortgang}. Laat dit scherm open tot het opruimen klaar is.</p>}</section>}
     </>}
   </>;
 }
