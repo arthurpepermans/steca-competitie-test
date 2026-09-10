@@ -13,12 +13,14 @@ import { MatchKaart } from "../components/MatchKaart";
 import { Sfeerbeelden } from "../components/Sfeerbeelden";
 import { JuniorStemming } from "../components/Junior";
 
+import { Ploegen } from "./Ploegen";
+
 export function Kalender() {
   const [params, setParams] = useSearchParams();
   const gekozenMatch = params.get('match');
   const { lid } = useAuth();
   const r = rechten(lid);
-  const [tab, setTab] = useState<"eigen" | "reeks">("eigen");
+  const [tab, setTab] = useState<"eigen" | "reeks" | "ploegen">("eigen");
   const [toonGespeeld, setToonGespeeld] = useState(true);
   const matches = useAsync(haalMatches);
   const verslagen = useAsync(haalVerslagen);
@@ -49,7 +51,9 @@ export function Kalender() {
       <div className="tabs">
         <button className={tab === "eigen" ? "actief" : ""} onClick={() => setTab("eigen")}>Steca Juniors</button>
         <button className={tab === "reeks" ? "actief" : ""} onClick={() => setTab("reeks")}>Hele reeks</button>
+      <button className={tab === "ploegen" ? "actief" : ""} onClick={() => setTab("ploegen")}>Ploegen</button>
       </div>
+      {tab === "ploegen" ? <Ploegen /> : <>
       <label className="klein zacht" style={{ display: "block", marginBottom: 10 }}>
         <input type="checkbox" checked={toonGespeeld} onChange={(e) => setToonGespeeld(e.target.checked)} /> gespeelde matchen tonen
       </label>
@@ -88,7 +92,7 @@ export function Kalender() {
         </section>
       ))}
       {lijst.length === 0 && <div className="kaart zacht">Geen matchen gevonden.</div>}
-      <LaatstBijgewerkt />
+      <LaatstBijgewerkt /></>}
     </>
   );
 }

@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { AuthContext } from "../lib/auth";
 import { Layout } from "../components/Layout";
+import { Kantine } from "../pages/Kantine";
 import { Home } from "../pages/Home";
 import { Kalender } from "../pages/Kalender";
 import { Klassement } from "../pages/Klassement";
@@ -25,6 +26,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/kalender" element={<Kalender />} />
         <Route path="/match/:key" element={<MatchVerslag />} />
         <Route path="/klassement" element={<Klassement />} />
+        <Route path="/kantine" element={<Kantine />} />
         <Route path="/opstelling" element={<Opstelling />} />
         <Route path="/ploegen" element={<Ploegen />} />
         <Route path="/ploegen/:id" element={<PloegDetail />} />
