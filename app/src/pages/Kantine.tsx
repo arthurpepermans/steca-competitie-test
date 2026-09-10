@@ -21,7 +21,7 @@ export function Kantine({ openbaar=false }: { openbaar?: boolean }) {
  const tab=['dream','prono','stand'].includes(gevraagd)?gevraagd:'home';
  const open=(spel:string)=>setParams(p=>{if(spel==='home')p.delete('spel');else p.set('spel',spel);return p;});
  return <><h1>De Kantine</h1>
- {tab==='home'?<><p className="zacht">Kies jouw spel.</p><div className="kantine-start">
+ {tab==='home'?<><p className="zacht">Een plek waar iedereen het beter weet dan de coach. Stel je Dream XI samen, voorspel de uitslag en bewijs dat je er ook iets van kent.</p><div className="kantine-start">
  <button className="kaart kantine-spel" onClick={()=>open('dream')}><span className="kantine-spel-nr" aria-hidden="true">XI</span><strong>Dream XI</strong><span>Stel jouw ideale Steca-ploeg samen.</span><span className="knop">Maak jouw Dream XI →</span></button>
  <button className="kaart kantine-spel" onClick={()=>open('prono')}><span className="kantine-spel-nr" aria-hidden="true">1–0</span><strong>Junior-Pronostieken</strong><span>Voorspel de Steca-matchen en klim in het klassement.</span><span className="knop">Naar Junior-Pronostieken →</span></button>
  </div></>:<><p><button className="knop licht klein" onClick={()=>open('home')}>← Terug naar De Kantine</button></p>
