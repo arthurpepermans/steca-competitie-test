@@ -25,7 +25,7 @@ apart in test_badge_toewijzingen en mogen nooit naar productie gekopieerd worden
 - Dezelfde badge/persoon/seizoen/wedstrijd nogmaals invoeren: foutmelding.
 - Verwijderen: verdwijnt op profiel en opstelling. Andere tabbladen vernieuwen
   bij focus, of binnen 30 seconden zolang ze zichtbaar zijn.
-- Veel leidersbadges tegelijk: twee kleine iconen en +aantal links net boven de naambalk;
+- Veel leidersbadges tegelijk: drie kleine iconen en aantal+ links net boven de naambalk;
   tikken opent de volledige lijst. De positie en spelernaam blijven leesbaar.
 
 Alle iconen gebruiken dezelfde cirkel, achtergrond en vaste kleuren. De
@@ -42,3 +42,12 @@ Gecontroleerd: alle 40 RPC-toewijzingen en verwijderingen, duplicaten,
 matchvereiste, ongeldige seizoenen en geweigerde onbevoegde mutaties. Die
 proefgegevens zijn in een transactie teruggedraaid. Unit-tests bewaken
 seizoenswissels, gedeelde leiders en de scheiding tussen titels en collectibles.
+
+## Eigen badgevolgorde
+
+Op het eigen profiel rangschikt een clublid badges met de pijltjes. Dit wordt
+meteen opgeslagen in test_badge_voorkeuren en in de opstelling gebruikt.
+Drie actieve badges zijn zichtbaar, gevolgd door het aantal extra badges.
+Nieuwe badges zonder voorkeur sluiten achteraan aan. Andere profielen zijn
+alleen te bekijken. De RPC leidt de eigenaar af uit de sessie en laat alleen
+badges toe die deze persoon bezit; toewijzingen blijven ongewijzigd.
