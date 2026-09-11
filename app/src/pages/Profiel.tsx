@@ -1,6 +1,7 @@
 import { SpelerBadges } from "../components/SpelerBadges";
 import { InstallatieHulp } from "../components/InstallatieHulp";
 import { SpelerStatistieken } from "../components/SpelerStatistieken";
+import { LichtkrantBeheer } from "../components/LichtkrantBeheer";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { wijzigLid } from "../lib/api";
@@ -66,6 +67,7 @@ export function Profiel() {
       </div>
       {!onboarding && lid.functie !== "supporter" && <SpelerBadges memberId={lid.id} />}
       {!onboarding && lid.speelt && <SpelerStatistieken memberId={lid.id} />}
+      {!onboarding && r.isAdmin && <LichtkrantBeheer />}
       {!onboarding && (
         <>
           <div className="kaart">
