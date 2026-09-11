@@ -63,7 +63,7 @@ export function BadgesTest() {
       </form>
       {persoon && <p className="knoppen"><Link to={`/leden/${persoon}`}>Bekijk spelersprofiel</Link><Link to="/opstelling">Bekijk opstelling</Link></p>}
       <h3>Toegewezen aan</h3>{!gekoppeld.length && <p>Nog niemand.</p>}
-      <ul className="badge-toewijzingen">{gekoppeld.map(t=><li key={t.id}><div><strong>{data.leden.find(l=>l.id===t.member_id)?.naam ?? 'Voormalig clublid'}</strong>{t.seizoen && <small>{t.seizoen.replace('-','/')}</small>}{t.match_key && <Link to={`/match/${encodeURIComponent(t.match_key)}`}>Matchverslag</Link>}</div><button className="knop licht klein" disabled={bezig} onClick={()=>void actie(()=>verwijderTestbadge(t.id),'Testtoewijzing verwijderd.')}>Verwijderen</button></li>)}</ul>
+      <ul className="badge-toewijzingen">{gekoppeld.map(t=><li key={t.id}><div><strong>{data.leden.find(l=>l.id===t.member_id)?.naam ?? 'Voormalig clublid'}</strong>{t.seizoen && <small>{t.seizoen.replace('-','/')}</small>}{t.match_key && <Link to={`/match/${encodeURIComponent(t.match_key)}`}>Matchverslag</Link>}</div>{t.automatisch ? <small>Automatisch uit matchcijfers</small> : <button className="knop licht klein" disabled={bezig} onClick={()=>void actie(()=>verwijderTestbadge(t.id),'Testtoewijzing verwijderd.')}>Verwijderen</button>}</li>)}</ul>
     </BadgeDialoog>}
   </>;
 }

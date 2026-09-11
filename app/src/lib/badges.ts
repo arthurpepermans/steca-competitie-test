@@ -4,9 +4,13 @@ import { useAsync } from './useAsync';
 import type { BadgeToewijzing } from './badgeCatalogus';
 
 export async function haalBadges(): Promise<BadgeToewijzing[]> {
-  const {data,error} = await supabase.from('test_badges_met_volgorde').select('id,badge_id,member_id,seizoen,match_key,aangemaakt_op,volgorde').order('aangemaakt_op');
-  if(error) throw new Error('De badges konden niet geladen worden. Probeer opnieuw.');
-  return data ?? [];
+  const badges: BadgeToewijzing[]=[];
+  for(let vanaf=0;;vanaf+=1000) {
+    const {data,error}=await supabase.from('badges_met_volgorde').select('id,badge_id,member_id,seizoen,match_key,aangemaakt_op,volgorde,automatisch').order('id').range(vanaf,vanaf+999);
+    if(error) throw new Error('De badges konden niet geladen worden. Probeer opnieuw.');
+    badges.push(...(data ?? []));
+    if(!data || data.length<1000) return badges;
+  }
 }
 export function useBadges() {
   const [versie,zetVersie] = useState(0);
@@ -42,3 +46,5 @@ export async function bewaarBadgeVolgorde(ids:string[]) {
   if(error) throw error;
   window.dispatchEvent(new Event('steca-badges'));
 }
+
+

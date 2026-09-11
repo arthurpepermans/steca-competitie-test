@@ -42,7 +42,7 @@ export const BADGES: Badge[] = [
   {id:'getikte_zot',titel:'Getikte Zot',uitleg:'Geel of rood in 2 opeenvolgende wedstrijden die je zelf speelde. Gemiste wedstrijden tellen niet mee.',soort:'verzameling'},
 ];
 
-export type BadgeToewijzing = { id: string; badge_id: string; member_id: string; seizoen: string | null; match_key: string | null; aangemaakt_op: string; volgorde?: number | null };
+export type BadgeToewijzing = { id: string; badge_id: string; member_id: string; seizoen: string | null; match_key: string | null; aangemaakt_op: string; automatisch?: boolean; volgorde?: number | null };
 export const badgeVoor = (id: string) => BADGES.find(b => b.id === id);
 export function seizoenNu(datum = new Date()): string {
   const jaar = datum.getMonth() >= 6 ? datum.getFullYear() : datum.getFullYear() - 1;
