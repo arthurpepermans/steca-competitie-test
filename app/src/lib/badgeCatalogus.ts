@@ -42,7 +42,7 @@ export const BADGES: Badge[] = [
   {id:'getikte_zot',titel:'Getikte Zot',uitleg:'Geel of rood in 2 opeenvolgende wedstrijden die je zelf speelde. Gemiste wedstrijden tellen niet mee.',soort:'verzameling'},
 ];
 
-export type BadgeToewijzing = { id: string; badge_id: string; member_id: string; seizoen: string | null; match_key: string | null; aangemaakt_op: string };
+export type BadgeToewijzing = { id: string; badge_id: string; member_id: string; seizoen: string | null; match_key: string | null; aangemaakt_op: string; volgorde?: number | null };
 export const badgeVoor = (id: string) => BADGES.find(b => b.id === id);
 export function seizoenNu(datum = new Date()): string {
   const jaar = datum.getMonth() >= 6 ? datum.getFullYear() : datum.getFullYear() - 1;
@@ -51,5 +51,11 @@ export function seizoenNu(datum = new Date()): string {
 export function truitjeBadges(toewijzingen: BadgeToewijzing[], memberId: string, seizoen = seizoenNu()): Badge[] {
   const ids = new Set(toewijzingen.filter(t => t.member_id === memberId &&
     (badgeVoor(t.badge_id)?.soort === 'alltime' || (badgeVoor(t.badge_id)?.soort === 'seizoen' && t.seizoen === seizoen))).map(t => t.badge_id));
-  return BADGES.filter(b => ids.has(b.id));
+  return sorteerBadges(BADGES.filter(b => ids.has(b.id)), toewijzingen.filter(t=>t.member_id===memberId));
+}
+
+/** Nieuwe badges zonder voorkeur komen na de gekozen badges, in catalogusvolgorde. */
+export function sorteerBadges(badges: Badge[], toewijzingen: BadgeToewijzing[]): Badge[] {
+  const rang=new Map(toewijzingen.map(t=>[t.badge_id,t.volgorde ?? Number.MAX_SAFE_INTEGER]));
+  return [...badges].sort((a,b)=>(rang.get(a.id) ?? Number.MAX_SAFE_INTEGER)-(rang.get(b.id) ?? Number.MAX_SAFE_INTEGER) || BADGES.indexOf(a)-BADGES.indexOf(b));
 }

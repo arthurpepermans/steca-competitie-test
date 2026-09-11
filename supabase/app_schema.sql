@@ -1416,3 +1416,32 @@ drop policy if exists "lichtkrant lezen" on ticker_messages;
 create policy "lichtkrant lezen" on ticker_messages for select to authenticated using (is_actief());
 drop policy if exists "lichtkrant beheren" on ticker_messages;
 create policy "lichtkrant beheren" on ticker_messages for all to authenticated using (is_admin()) with check (is_admin());
+
+-- Persoonlijke volgorde, uitsluitend presentatie; verleent nooit een badge.
+create table if not exists public.test_badge_voorkeuren (
+ member_id uuid primary key references public.members(id) on delete cascade,
+ badges text[] not null default '{}'
+);
+alter table public.test_badge_voorkeuren enable row level security;
+revoke all on public.test_badge_voorkeuren from public,anon,authenticated;
+grant select on public.test_badge_voorkeuren to anon,authenticated;
+drop policy if exists badgevoorkeur_lezen on public.test_badge_voorkeuren;
+create policy badgevoorkeur_lezen on public.test_badge_voorkeuren for select using(true);
+create or replace view public.test_badges_met_volgorde with (security_invoker=true) as
+ select t.*,array_position(v.badges,t.badge_id) as volgorde
+ from public.test_badge_toewijzingen t left join public.test_badge_voorkeuren v on v.member_id=t.member_id;
+revoke all on public.test_badges_met_volgorde from public,anon,authenticated;
+grant select on public.test_badges_met_volgorde to anon,authenticated;
+create or replace function public.bewaar_badgevolgorde(p_badges text[]) returns void
+language plpgsql security definer set search_path=public as $$
+declare lid uuid:=my_member_id();
+begin
+ if lid is null or not is_actief() then raise exception 'Log in met je actieve clubaccount.'; end if;
+ if p_badges is null or cardinality(p_badges)>40 or array_position(p_badges,null) is not null then raise exception 'Ongeldige badgevolgorde.'; end if;
+ if (select count(distinct b) from unnest(p_badges) b)<>cardinality(p_badges) then raise exception 'Een badge mag maar een keer in de volgorde staan.'; end if;
+ if exists(select 1 from unnest(p_badges) b where not exists(select 1 from test_badge_toewijzingen t where t.member_id=lid and t.badge_id=b)) then raise exception 'Je kunt alleen je eigen badges rangschikken.'; end if;
+ insert into test_badge_voorkeuren(member_id,badges) values(lid,p_badges)
+ on conflict(member_id) do update set badges=excluded.badges;
+end $$;
+revoke all on function public.bewaar_badgevolgorde(text[]) from public,anon;
+grant execute on function public.bewaar_badgevolgorde(text[]) to authenticated;

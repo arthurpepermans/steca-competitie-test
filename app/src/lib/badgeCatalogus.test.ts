@@ -29,3 +29,12 @@ describe('afgesproken catalogus',()=>{
     expect(BADGES.filter(b=>b.herhaalbaar).map(b=>b.id)).toEqual(['hattrick','junior_van_de_match']);
   });
 });
+
+it('gebruikt persoonlijke volgorde voor de drie zichtbare titels, met nieuwe badges achteraan',()=>{
+  const lijst=[{...award('gouden_stier','2026-2027'),volgorde:3},{...award('goat'),volgorde:1},{...award('betonblok'),volgorde:2},award('maestro')];
+  expect(truitjeBadges(lijst,'a','2026-2027').map(b=>b.id)).toEqual(['goat','betonblok','gouden_stier','maestro']);
+});
+it('neemt nooit de voorkeur van een andere speler over',()=>{
+  const lijst=[award('goat'),award('betonblok'),{...award('goat',null,'b'),volgorde:1}];
+  expect(truitjeBadges(lijst,'a').map(b=>b.id)).toEqual(['betonblok','goat']);
+});

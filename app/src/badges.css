@@ -32,3 +32,8 @@
 .veldspeler:has(.truitje-badge-detail),.bankspeler:has(.truitje-badge-detail) { z-index:20; }
 @media(max-width:420px) { .badge-test-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .badge-dialoog-achtergrond { padding:10px; } .badge-dialoog { padding:16px; max-height:calc(100dvh - 20px); } }
 .badge-dialoog::backdrop { background:#0009; }
+
+.badge-profiel-kaart { min-width:0; }
+.badge-volgorde-knoppen { display:flex; justify-content:center; gap:8px; margin-top:6px; }
+.badge-volgorde-knoppen button { min-width:36px; min-height:32px; border:1px solid var(--rand); border-radius:4px; background:var(--kaart); font-size:18px; }
+.badge-volgorde-knoppen button:disabled { opacity:.3; cursor:default; }

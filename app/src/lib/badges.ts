@@ -4,7 +4,7 @@ import { useAsync } from './useAsync';
 import type { BadgeToewijzing } from './badgeCatalogus';
 
 export async function haalBadges(): Promise<BadgeToewijzing[]> {
-  const {data,error} = await supabase.from('test_badge_toewijzingen').select('id,badge_id,member_id,seizoen,match_key,aangemaakt_op').order('aangemaakt_op');
+  const {data,error} = await supabase.from('test_badges_met_volgorde').select('id,badge_id,member_id,seizoen,match_key,aangemaakt_op,volgorde').order('aangemaakt_op');
   if(error) throw new Error('De badges konden niet geladen worden. Probeer opnieuw.');
   return data ?? [];
 }
@@ -33,6 +33,12 @@ export async function wijsTestbadgeToe(badgeId:string,memberId:string,seizoen:st
 }
 export async function verwijderTestbadge(id:string) {
   const {error} = await supabase.rpc('verwijder_testbadge',{p_id:id});
+  if(error) throw error;
+  window.dispatchEvent(new Event('steca-badges'));
+}
+
+export async function bewaarBadgeVolgorde(ids:string[]) {
+  const {error}=await supabase.rpc('bewaar_badgevolgorde',{p_badges:ids});
   if(error) throw error;
   window.dispatchEvent(new Event('steca-badges'));
 }
