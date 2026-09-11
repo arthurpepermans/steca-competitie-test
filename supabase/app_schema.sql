@@ -855,7 +855,7 @@ create or replace function public.openbare_opstellingen() returns jsonb
 language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object(
     'match_key', l.match_key, 'formatie', l.formatie,
-    'spelers', coalesce((select jsonb_agg(jsonb_build_object('positie', p.positie, 'naam', m.naam) order by p.positie)
+    'spelers', coalesce((select jsonb_agg(jsonb_build_object('positie', p.positie, 'naam', m.naam, 'member_id', m.id) order by p.positie)
       from public.lineup_players p join public.members m on m.id=p.member_id
       where p.lineup_id=l.id), '[]'::jsonb)
   ) order by l.match_key), '[]'::jsonb)
@@ -1276,3 +1276,107 @@ begin
 end $$;
 revoke all on function public.admin_accountfunctie(uuid,text) from public,anon;
 grant execute on function public.admin_accountfunctie(uuid,text) to authenticated;
+
+-- Badges: uitsluitend handmatige testtoewijzingen in de aparte testomgeving.
+create table if not exists public.test_badge_catalogus (
+ id text primary key, soort text not null check(soort in ('seizoen','alltime','verzameling')),
+ herhaalbaar boolean not null default false
+);
+insert into public.test_badge_catalogus(id,soort,herhaalbaar) values
+('gouden_stier','seizoen',false),
+('het_kanon','alltime',false),
+('assistenkoning','seizoen',false),
+('maestro','alltime',false),
+('de_muur','seizoen',false),
+('betonblok','alltime',false),
+('beenhouwer','seizoen',false),
+('rosse_furie','seizoen',false),
+('fundering','seizoen',false),
+('vaste_waarde','seizoen',false),
+('clubmeubilair','alltime',false),
+('star_boy','seizoen',false),
+('goat','alltime',false),
+('kuisvrouw','seizoen',false),
+('junior_dor','seizoen',false),
+('eentje_is_geentje','verzameling',false),
+('dubbele_cijfers','verzameling',false),
+('goalgetter','verzameling',false),
+('sluipschutter','verzameling',false),
+('67','verzameling',false),
+('triple_digits','verzameling',false),
+('wingman','verzameling',false),
+('facteur','verzameling',false),
+('de_architect','verzameling',false),
+('kdb_der_juniors','verzameling',false),
+('muur_van_dendermonde','verzameling',false),
+('veilige_handen','verzameling',false),
+('opgewarmd_door_georgie','verzameling',false),
+('golden_glove','verzameling',false),
+('official_junior','verzameling',false),
+('toogplekker','verzameling',false),
+('sterkhouder','verzameling',false),
+('georgies_favoriet','verzameling',false),
+('steca_legend','verzameling',false),
+('hattrick','verzameling',true),
+('vijf_op_een_rij','verzameling',false),
+('rots_in_de_branding','verzameling',false),
+('junior_van_de_match','verzameling',true),
+('laat_je_ploeg','verzameling',false),
+('getikte_zot','verzameling',false)
+on conflict(id) do update set soort=excluded.soort,herhaalbaar=excluded.herhaalbaar;
+alter table public.test_badge_catalogus enable row level security;
+revoke all on public.test_badge_catalogus from public,anon,authenticated;
+
+create table if not exists public.test_badge_toewijzingen (
+ id uuid primary key default gen_random_uuid(),
+ badge_id text not null references public.test_badge_catalogus(id),
+ member_id uuid not null references public.members(id) on delete cascade,
+ seizoen text check(seizoen ~ '^[0-9]{4}-[0-9]{4}$'),
+ match_key text references public.matches(match_key) on delete cascade,
+ aangemaakt_op timestamptz not null default now()
+);
+create unique index if not exists test_badge_een_keer on public.test_badge_toewijzingen
+ (badge_id,member_id,coalesce(seizoen,''),coalesce(match_key,''));
+alter table public.test_badge_toewijzingen enable row level security;
+revoke all on public.test_badge_toewijzingen from public,anon,authenticated;
+grant select on public.test_badge_toewijzingen to anon,authenticated;
+drop policy if exists test_badges_lezen on public.test_badge_toewijzingen;
+create policy test_badges_lezen on public.test_badge_toewijzingen for select using (true);
+
+create or replace function public.mag_testbadges_beheren() returns boolean
+language sql stable security definer set search_path=public as $$
+ select is_actief() and is_admin() and exists(select 1 from push_config where allowed_member=my_member_id());
+$$;
+revoke all on function public.mag_testbadges_beheren() from public,anon;
+grant execute on function public.mag_testbadges_beheren() to authenticated;
+
+create or replace function public.wijs_testbadge_toe(p_badge_id text,p_member_id uuid,p_seizoen text default null,p_match_key text default null) returns uuid
+language plpgsql security definer set search_path=public as $$
+declare b test_badge_catalogus; resultaat uuid;
+begin
+ if not coalesce(mag_testbadges_beheren(),false) then raise exception 'Alleen de aangewezen testbeheerder kan badges toewijzen.'; end if;
+ select * into b from test_badge_catalogus where id=p_badge_id;
+ if not found then raise exception 'Onbekende badge.'; end if;
+ if not exists(select 1 from members where id=p_member_id and status='actief' and functie<>'supporter') then raise exception 'Kies een actief clublid.'; end if;
+ if b.soort='seizoen' then
+   if p_seizoen is null or p_seizoen !~ '^[0-9]{4}-[0-9]{4}$' then raise exception 'Kies een geldig seizoen.'; end if;
+   if right(p_seizoen,4)::integer <> left(p_seizoen,4)::integer+1 then raise exception 'Kies een geldig seizoen.'; end if;
+ elsif p_seizoen is not null then raise exception 'Deze badge hoort niet bij een seizoen.';
+ end if;
+ if b.herhaalbaar then
+   if p_match_key is null or not exists(select 1 from matches where match_key=p_match_key and (thuis_id=152 or uit_id=152)) then raise exception 'Kies de bijbehorende wedstrijd van Steca.'; end if;
+ elsif p_match_key is not null then raise exception 'Deze badge wordt eenmalig toegewezen.';
+ end if;
+ insert into test_badge_toewijzingen(badge_id,member_id,seizoen,match_key)
+ values(p_badge_id,p_member_id,p_seizoen,p_match_key) on conflict do nothing returning id into resultaat;
+ if resultaat is null then raise exception 'Deze persoon heeft deze badge voor dit seizoen of deze wedstrijd al.'; end if;
+ return resultaat;
+end $$;
+create or replace function public.verwijder_testbadge(p_id uuid) returns void
+language plpgsql security definer set search_path=public as $$
+begin
+ if not coalesce(mag_testbadges_beheren(),false) then raise exception 'Alleen de aangewezen testbeheerder kan testbadges verwijderen.'; end if;
+ delete from test_badge_toewijzingen where id=p_id;
+end $$;
+revoke all on function public.wijs_testbadge_toe(text,uuid,text,text),public.verwijder_testbadge(uuid) from public,anon;
+grant execute on function public.wijs_testbadge_toe(text,uuid,text,text),public.verwijder_testbadge(uuid) to authenticated;

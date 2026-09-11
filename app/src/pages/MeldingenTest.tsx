@@ -1,3 +1,4 @@
+import { BadgesTest } from "../components/BadgesTest";
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { haalMatches } from '../lib/api';
@@ -17,7 +18,7 @@ const scenarios = [
   ['stemmen','Score na 80 minuten','Verwacht: uitnodiging voor Junior van de match.'],
   ['gestemd','Stem al uitgebracht','Verwacht: géén stemherinnering.'],
 ];
-export function MeldingenTest() {
+function MeldingenInhoud() {
   const {lid}=useAuth();
   const navigate=useNavigate();
   const [params,setParams] = useSearchParams();
@@ -77,4 +78,12 @@ export function MeldingenTest() {
       {rechten(lid).isAdmin && <section className="kaart"><h2>Testmatches opruimen</h2><p>{info.data.sleutels.length} testmatches. Je verwijdert ze samen met hun verslagen, stemmen, opstellingen, meldingen en sfeerbeelden.</p><button className="knop licht" disabled={bezig || !info.data.sleutels.length} onClick={wisAlles}>Alle testmatches verwijderen</button>{voortgang && <p role="status">{voortgang}. Laat dit scherm open tot het opruimen klaar is.</p>}</section>}
     </>}
   </>;
+}
+
+export function MeldingenTest() {
+  const [params,setParams]=useSearchParams();
+  const tab=params.get('tab')==='badges'?'badges':'meldingen';
+  return <><h1>Testcentrum</h1><div className="tabs" aria-label="Onderdelen testcentrum">
+    {(['meldingen','badges'] as const).map(t=><button className={tab===t?'actief':''} aria-pressed={tab===t} key={t} onClick={()=>setParams(p=>{p.set('tab',t);return p;})}>{t==='badges'?'Badges':'Meldingen'}</button>)}
+  </div>{tab==='badges'?<BadgesTest/>:<MeldingenInhoud/>}</>;
 }

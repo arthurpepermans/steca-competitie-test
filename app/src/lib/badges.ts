@@ -1,0 +1,38 @@
+import { useEffect, useState } from 'react';
+import { supabase } from './supabase';
+import { useAsync } from './useAsync';
+import type { BadgeToewijzing } from './badgeCatalogus';
+
+export async function haalBadges(): Promise<BadgeToewijzing[]> {
+  const {data,error} = await supabase.from('test_badge_toewijzingen').select('id,badge_id,member_id,seizoen,match_key,aangemaakt_op').order('aangemaakt_op');
+  if(error) throw new Error('De badges konden niet geladen worden. Probeer opnieuw.');
+  return data ?? [];
+}
+export function useBadges() {
+  const [versie,zetVersie] = useState(0);
+  useEffect(() => {
+    const ververs = () => {if(document.visibilityState === 'visible') zetVersie(v => v+1);};
+    window.addEventListener('steca-badges',ververs);
+    window.addEventListener('focus',ververs);
+    document.addEventListener('visibilitychange',ververs);
+    // Ook wijzigingen vanaf een tweede toestel worden zichtbaar, zonder realtime-configuratie.
+    const timer = window.setInterval(ververs,30000);
+    return () => {window.removeEventListener('steca-badges',ververs);window.removeEventListener('focus',ververs);document.removeEventListener('visibilitychange',ververs);window.clearInterval(timer);};
+  },[]);
+  return useAsync(haalBadges,[versie]);
+}
+export async function magBadgesTesten():Promise<boolean> {
+  const {data,error} = await supabase.rpc('mag_testbadges_beheren');
+  if(error) throw new Error('Het badge-testcentrum is nog niet beschikbaar.');
+  return data === true;
+}
+export async function wijsTestbadgeToe(badgeId:string,memberId:string,seizoen:string|null,matchKey:string|null) {
+  const {error} = await supabase.rpc('wijs_testbadge_toe',{p_badge_id:badgeId,p_member_id:memberId,p_seizoen:seizoen,p_match_key:matchKey});
+  if(error) throw error;
+  window.dispatchEvent(new Event('steca-badges'));
+}
+export async function verwijderTestbadge(id:string) {
+  const {error} = await supabase.rpc('verwijder_testbadge',{p_id:id});
+  if(error) throw error;
+  window.dispatchEvent(new Event('steca-badges'));
+}
