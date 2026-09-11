@@ -25,7 +25,7 @@ apart in test_badge_toewijzingen en mogen nooit naar productie gekopieerd worden
 - Dezelfde badge/persoon/seizoen/wedstrijd nogmaals invoeren: foutmelding.
 - Verwijderen: verdwijnt op profiel en opstelling. Andere tabbladen vernieuwen
   bij focus, of binnen 30 seconden zolang ze zichtbaar zijn.
-- Veel leidersbadges tegelijk: twee kleine iconen en +aantal op het shirt;
+- Veel leidersbadges tegelijk: twee kleine iconen en +aantal links net boven de naambalk;
   tikken opent de volledige lijst. De positie en spelernaam blijven leesbaar.
 
 Alle iconen gebruiken dezelfde cirkel, achtergrond en vaste kleuren. De
