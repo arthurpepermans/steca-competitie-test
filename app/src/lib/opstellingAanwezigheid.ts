@@ -7,3 +7,8 @@ export function aanwezigeSpelerIds(matchKey: string | null, aanwezigheden: Atten
 export function nietAanwezigeKeuzes(keuze: Record<string, string | null>, aanwezig: Set<string>): string[] {
   return [...new Set(Object.values(keuze).filter((id): id is string => Boolean(id) && !aanwezig.has(id!)))];
 }
+
+/** Alleen in deze testrepository: beheerders kunnen hun eigen badgeweergave testen. */
+export function isOpstelbaarInTest(lid: {status:string;speelt:boolean;is_admin:boolean;is_hoofdadmin:boolean}):boolean {
+  return lid.status==='actief' && (lid.speelt || lid.is_admin || lid.is_hoofdadmin);
+}

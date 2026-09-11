@@ -336,8 +336,8 @@ create trigger lineups_stamp before insert or update on lineups
 create or replace function lineup_players_check() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  if not exists (select 1 from members where id = new.member_id and status = 'actief' and speelt) then
-    raise exception 'alleen actieve leden die meespelen kunnen opgesteld worden';
+  if not exists (select 1 from members where id = new.member_id and status = 'actief' and (speelt or is_admin or is_hoofdadmin)) then
+    raise exception 'Alleen actieve spelers of testbeheerders kunnen opgesteld worden';
   end if;
   perform 1 from attendance a join lineups l on l.match_key = a.match_key
     where l.id = new.lineup_id and a.member_id = new.member_id and a.status = 'aanwezig'
