@@ -8,9 +8,7 @@ toewijzen en weer verwijderen. Supporters verschijnen niet in de keuzelijst.
 De RPC's controleren dezelfde rechten; rechtstreeks schrijven naar de tabel
 is niet toegestaan voor gebruikers.
 
-Dit is de visuele testfase: handmatige testtoewijzingen, geen automatische
-toekenning op basis van wedstrijdcijfers. De voorwaarden onder de badges
-beschrijven het beoogde uiteindelijke systeem. Alle testtoewijzingen staan
+Naast handmatige voorbeelden worden badges nu automatisch berekend uit de wedstrijdcijfers. Zie BADGES.md voor de regels. Alle testtoewijzingen staan
 apart in test_badge_toewijzingen en mogen nooit naar productie gekopieerd worden.
 
 ## Proefgevallen
@@ -51,3 +49,4 @@ Drie actieve badges zijn zichtbaar, gevolgd door het aantal extra badges.
 Nieuwe badges zonder voorkeur sluiten achteraan aan. Andere profielen zijn
 alleen te bekijken. De RPC leidt de eigenaar af uit de sessie en laat alleen
 badges toe die deze persoon bezit; toewijzingen blijven ongewijzigd.
+
