@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { LockSimple } from "@phosphor-icons/react/dist/csr/LockSimple";
 import { LockSimpleOpen } from "@phosphor-icons/react/dist/csr/LockSimpleOpen";
 import { bewaarOpstellingAutomatisch, haalAanwezigheden, haalLedenBasis, haalMatches, haalOpstellingSpelers, haalOpstellingen, haalWasbeurten } from "../lib/api";
-import { aanwezigeSpelerIds, nietAanwezigeKeuzes } from "../lib/opstellingAanwezigheid";
+import { aanwezigeSpelerIds, nietAanwezigeKeuzes, isOpstelbaarInTest } from "../lib/opstellingAanwezigheid";
 import { Aanwezigheid } from "../components/Aanwezigheid";
-import { isSpelerLid, rechten, useAuth } from "../lib/auth";
+import { rechten, useAuth } from "../lib/auth";
 import { fmtDatum, isEigen, sorteerOpDatum, tegenstander, vandaagIso, volgendeMatch } from "../lib/datum";
 import { BANK, FORMATIE_KEUZES, STANDAARD_FORMATIE, allePosities, basisPosities, controleerOpstelling, positieLabel, radOpstelling, veranderFormatie, type OpstellingKeuze } from "../lib/formaties";
 import { foutTekst, useAsync } from "../lib/useAsync";
@@ -47,7 +47,7 @@ export function Opstelling() {
   const gekozenKey = matchKey ?? volgende?.match_key ?? null;
   const match = eigenMatches.find((m) => m.match_key === gekozenKey);
   const lineup = (lineups.data ?? []).find((l) => l.match_key === gekozenKey);
-  const spelers = (leden.data ?? []).filter(isSpelerLid).map((m) => ({ id: m.id, naam: m.naam }));
+  const spelers = (leden.data ?? []).filter(isOpstelbaarInTest).map((m) => ({ id: m.id, naam: m.naam }));
   const namen = new Map(spelers.map((p) => [p.id, p.naam]));
   const aanwezig = aanwezigeSpelerIds(gekozenKey, aanwezigheden.data ?? []);
   const beschikbaar = spelers.filter((p) => aanwezig.has(p.id));
@@ -271,7 +271,7 @@ export function Opstelling() {
         <div className="kaart">
           <h2>Aanwezigheid</h2>
           <p>Alleen aanwezige spelers kunnen in de basis of op de bank staan. Momenteel beschikbaar: {beschikbaar.length}.</p>
-          <Aanwezigheid key={match.match_key} match={match} spelers={spelers} aanwezigheden={aanwezigheden.data ?? []} eigenLidId={lid?.id ?? null} isSpeler={r.isSpeler} isStaf={r.isStaf} isAdmin={r.isAdmin} onGewijzigd={aanwezigheden.herlaad} />
+          <Aanwezigheid key={match.match_key} match={match} spelers={spelers} aanwezigheden={aanwezigheden.data ?? []} eigenLidId={lid?.id ?? null} isSpeler={Boolean(lid && isOpstelbaarInTest(lid))} isStaf={r.isStaf} isAdmin={r.isAdmin} onGewijzigd={aanwezigheden.herlaad} />
         </div>
       )}
 
