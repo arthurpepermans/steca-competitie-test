@@ -1,3 +1,4 @@
+import {VrouwenProfielBadges} from '../components/VrouwenProfielBadges';
 import {it,expect} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MemoryRouter} from 'react-router-dom';
@@ -49,4 +50,12 @@ it('tekent zaalformaties met vier veldspeelsters, doelvrouw en vijf reserves',()
  if(formatie==='3-1')expect(html).toContain('Centrale verdediger');
  if(formatie==='1-2-1')expect(html).toContain('Linksmidden');
  }
+});
+
+it('berekent profielbadges alleen uit de meegestuurde vrouwenresultaten',()=>{
+ const basis={...data,user_id:'speler',wasmand:[],stempunten:[],leden:[{id:'veld',user_id:'speler',speelt:true,naam:'Speelster',functie:'speler',status:'actief'}],matches:[match],verslagen:[],aanwezigheden:[]} as unknown as ClubData;
+ const leeg=renderToStaticMarkup(<VrouwenProfielBadges data={{...basis,matches:[],opstellingen:[]}} id="veld"/>);
+ expect(leeg).toContain('Nog geen badges behaald');expect(leeg).not.toContain('Gouden Stier');
+ const goal=renderToStaticMarkup(<VrouwenProfielBadges data={{...basis,verslagen:[{match_key:match.match_key,verslag:'',statistieken:[{id:'veld',goals:1,assists:0,geel:0,rood:0}]}]}} id="veld"/>);
+ expect(goal).toContain('Gouden Stier');expect(goal).toContain('Eentje is geentje');expect(goal).not.toContain('Dubbele Cijfers');
 });

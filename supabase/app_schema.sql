@@ -2169,3 +2169,20 @@ declare r vrouwen_sync; lokaal timestamp:=now() at time zone 'Europe/Brussels'; 
 end $$;
 revoke all on function vrouwen_sync_worker(text,text,uuid,jsonb) from public;
 grant execute on function vrouwen_sync_worker(text,text,uuid,jsonb) to anon;
+
+create table if not exists public.club_berichten(id uuid primary key default gen_random_uuid(),club_id text not null,tekst text not null check(length(btrim(tekst)) between 1 and 140),actief boolean not null default true,auteur uuid not null default auth.uid(),created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+alter table club_berichten enable row level security;
+revoke all on club_berichten from anon,authenticated;
+create or replace function public.club_lichtkrant(p_club text) returns jsonb language sql stable security definer set search_path=public as $$
+ select coalesce(jsonb_agg(jsonb_build_object('id',b.id,'tekst',b.tekst,'actief',b.actief,'auteur',coalesce(m.naam,'Staf'),'updated_at',b.updated_at) order by b.created_at),'[]') from club_berichten b left join club_members m on m.club_id=b.club_id and m.user_id=b.auteur where b.club_id=p_club and (b.actief or club_staf(p_club))
+$$;
+create or replace function public.club_bewaar_bericht(p_club text,p_id uuid default null,p_tekst text default '',p_actief boolean default true,p_verwijder boolean default false) returns void language plpgsql security definer set search_path=public as $$
+begin
+ if not coalesce(club_staf(p_club),false) then raise exception 'Alleen coaches, verantwoordelijken en admins kunnen boodschappen beheren.';end if;
+ if p_id is null then insert into club_berichten(club_id,tekst) values(p_club,btrim(p_tekst));
+ elsif p_verwijder then delete from club_berichten where club_id=p_club and id=p_id;if not found then raise exception 'Boodschap niet gevonden.';end if;
+ else update club_berichten set tekst=btrim(p_tekst),actief=p_actief,updated_at=now() where club_id=p_club and id=p_id;if not found then raise exception 'Boodschap niet gevonden.';end if;end if;
+end $$;
+revoke all on function club_bewaar_bericht(text,uuid,text,boolean,boolean) from public;
+grant execute on function club_bewaar_bericht(text,uuid,text,boolean,boolean) to authenticated;
+grant execute on function club_lichtkrant(text) to anon,authenticated;
