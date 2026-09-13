@@ -38,3 +38,15 @@ it('toont een gespeelde bronmatch ook wanneer die nog niet in clubgegevens staat
  const html=renderToStaticMarkup(<MemoryRouter><VrouwenKalender data={{...data,matches:[]}} bron={{seizoen:'2026-2027',klassementen:[],wedstrijden:[{id:1,thuis:'VEDETJES',uit:'STECA VROUWEN',aftrap:'2026-09-09T19:00:00+02:00',score:[21,0],locaties:[],reeks:'Dames Zele'}]}}/></MemoryRouter>);
  expect(html).toContain('ticket-scheur');expect(html).toContain('21 - 0');expect(html).toContain('VEDETJES');expect(html).toContain('verlies');
 });
+
+it('tekent zaalformaties met vier veldspeelsters, doelvrouw en vijf reserves',()=>{
+ for(const formatie of ['2-2','3-1','1-2-1'] as const){
+ const html=renderToStaticMarkup(<Tactiekbord formatie="4-3-3" zaal zaalOpstelling={formatie} namen={{LB:'Anna',RB:'Bente',LW:'Cato',RW:'Dina'}}/>);
+ expect(html.match(/class="veldspeler"/g)).toHaveLength(5);
+ expect(html.match(/class="bankspeler"/g)).toHaveLength(5);
+ expect(html).toContain(formatie);expect(html).toContain('fill="#fff"');expect(html).toContain('stroke="#f5b5d1"');
+ for(const naam of ['Anna','Bente','Cato','Dina'])expect(html).toContain(naam);
+ if(formatie==='3-1')expect(html).toContain('Centrale verdediger');
+ if(formatie==='1-2-1')expect(html).toContain('Linksmidden');
+ }
+});

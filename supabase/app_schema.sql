@@ -1871,6 +1871,7 @@ create or replace function public.club_controle_keuze(p_club text,p_keuze jsonb,
 declare k text; v text; gezien text[]:='{}';begin
  if jsonb_typeof(p_keuze)<>'object' or length(p_keuze::text)>8000 then raise exception 'Ongeldige opstelling.';end if;
  for k,v in select * from jsonb_each_text(p_keuze) loop
+ if k='__formatie' then if v is null or v not in ('2-2','3-1','1-2-1') then raise exception 'Onbekende formatie.';end if;continue;end if;
  if k not in ('GK','LB','RB','LW','RW','BANK1','BANK2','BANK3','BANK4','BANK5') then raise exception 'Onbekende positie.';end if;
  if v is null or v='' then continue;end if;
  if v=any(gezien) then raise exception 'Iemand staat dubbel in de opstelling.';end if;gezien:=array_append(gezien,v);
