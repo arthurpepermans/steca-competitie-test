@@ -1,3 +1,4 @@
+import {Ploegkeuze} from "./Ploegkeuze";
 import { SupporterAanwezigheidProvider } from "./SupporterAanwezigheid";
 import { useEffect, useState } from "react";
 import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
@@ -47,10 +48,10 @@ export function Layout() {
     <>
       <a href="#inhoud" className="skip-link" onClick={(event) => { event.preventDefault(); document.getElementById("inhoud")?.focus(); }}>Naar inhoud</a>
       <header className="kop">
-        <Link to="/" className="clubmerk">
+        {import.meta.env.VITE_PLOEGEN_ENABLED==='true'?<Ploegkeuze ploeg="mannen"/>:<Link to="/" className="clubmerk">
           <img src={import.meta.env.BASE_URL + "logo-retro.png"} alt="" width="44" height="52" />
           <span>STECA JUNIORS<small>CLUBAPP</small></span>
-        </Link>
+        </Link>}
         <div className="kop-acties">
           <button className="thema-knop" type="button" onClick={() => setDonker(!donker)} aria-label={donker ? "Licht thema" : "Donker thema"}>
             {donker ? <Sun size={21} /> : <Moon size={21} />}
@@ -61,7 +62,6 @@ export function Layout() {
           </Link>
         </div>
       </header>
-      {import.meta.env.VITE_PLOEGEN_ENABLED==='true'&&<p className="inhoud"><Link to="/vrouwen">Wissel naar Steca Vrouwen</Link></p>}
       <Lichtkrant />
       <main id="inhoud" className="inhoud" tabIndex={-1}><NieuweVersie /><SupporterAanwezigheidProvider><Outlet /></SupporterAanwezigheidProvider></main>
       <MeldingenPopup />
