@@ -36,3 +36,5 @@
 /* Gelijke schildverhouding als het mannenlogo, met behoud van transparantie. */
 [data-ploeg="vrouwen"] img[src*="logo-vrouwen-transparant"]{object-fit:contain;scale:.88 1;flex-shrink:0}
 
+
+[data-ploeg="vrouwen"] .match-affiche img.affiche-logo{scale:1}
