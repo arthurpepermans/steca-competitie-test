@@ -1,3 +1,4 @@
+import { SupporterBadgesTest } from "../components/SupporterKlassement";
 import { BadgesTest } from "../components/BadgesTest";
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -82,8 +83,8 @@ function MeldingenInhoud() {
 
 export function MeldingenTest() {
   const [params,setParams]=useSearchParams();
-  const tab=params.get('tab')==='badges'?'badges':'meldingen';
+  const tab=params.get('tab')==='supporters'?'supporters':params.get('tab')==='badges'?'badges':'meldingen';
   return <><h1>Testcentrum</h1><div className="tabs" aria-label="Onderdelen testcentrum">
-    {(['meldingen','badges'] as const).map(t=><button className={tab===t?'actief':''} aria-pressed={tab===t} key={t} onClick={()=>setParams(p=>{p.set('tab',t);return p;})}>{t==='badges'?'Badges':'Meldingen'}</button>)}
-  </div>{tab==='badges'?<BadgesTest/>:<MeldingenInhoud/>}</>;
+    {(['meldingen','badges','supporters'] as const).map(t=><button className={tab===t?'actief':''} aria-pressed={tab===t} key={t} onClick={()=>setParams(p=>{p.set('tab',t);return p;})}>{t==='supporters'?'Supporters':t==='badges'?'Badges':'Meldingen'}</button>)}
+  </div>{tab==='supporters'?<SupporterBadgesTest/>:tab==='badges'?<BadgesTest/>:<MeldingenInhoud/>}</>;
 }

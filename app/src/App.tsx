@@ -1,3 +1,4 @@
+import { SupporterKlassement, SupporterProfiel } from "./components/SupporterKlassement";
 import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, rechten, useAuth } from "./lib/auth";
 import { configOk } from "./lib/supabase";
@@ -12,8 +13,9 @@ import { Leden, LidDetail } from "./pages/Leden";
 import { Profiel } from "./pages/Profiel";
 import { Supporters } from "./pages/Supporters";
 import { DriveBeheer } from "./pages/DriveBeheer";
-import { MatchVerslag } from "./pages/MatchVerslag";
-import { MeldingenTest } from "./pages/MeldingenTest";
+
+import { MatchVerslag } from './pages/MatchVerslag';
+import { MeldingenTest } from './pages/MeldingenTest';
 
 import { Kantine } from "./pages/Kantine";
 
@@ -21,7 +23,13 @@ function Poort() {
   const { klaar, session, lid, supporter, fout } = useAuth();
   const locatie = useLocation();
   if (!klaar) return <Laden tekst="Even geduld…" />;
-  if (locatie.pathname === "/supporters") return <Supporters />;
+  if (locatie.pathname === "/supporters") {
+    if (supporter?.actief) {
+      const tab = new URLSearchParams(locatie.search).get("tab");
+      return <Navigate to={tab ? "/" + tab.toLowerCase().replace("home", "") : "/"} replace />;
+    }
+    return <Supporters />;
+  }
 
   if (!session) {
     return (
@@ -36,10 +44,10 @@ function Poort() {
   }
   if (locatie.pathname === "/nieuw-wachtwoord") return <NieuwWachtwoord />;
   if (fout) return <Geblokkeerd tekst={`Je gegevens konden niet geladen worden: ${fout}`} />;
-  if (supporter) return supporter.actief ? <Navigate to="/supporters?tab=Kantine" replace /> : <Geblokkeerd tekst="Dit supporteraccount is gedeactiveerd." />;
-  if (!lid) return <Geblokkeerd tekst="Er is geen lid gekoppeld aan dit account. Vraag een beheerder om hulp." />;
-  if (lid.status === "wacht_op_goedkeuring") return <WachtOpGoedkeuring />;
-  if (lid.status === "inactief") return <Geblokkeerd tekst="Dit account is gedeactiveerd. Vraag een beheerder om het opnieuw te activeren." />;
+  if (supporter && !supporter.actief) return <Geblokkeerd tekst="Dit supporteraccount is gedeactiveerd." />;
+  if (!lid && !supporter) return <Geblokkeerd tekst="Er is geen lid gekoppeld aan dit account. Vraag een beheerder om hulp." />;
+  if (lid?.status === "wacht_op_goedkeuring") return <WachtOpGoedkeuring />;
+  if (lid?.status === "inactief") return <Geblokkeerd tekst="Dit account is gedeactiveerd. Vraag een beheerder om het opnieuw te activeren." />;
 
   const r = rechten(lid);
   if (!r.gegevensVolledig && locatie.pathname !== "/profiel") return <Navigate to="/profiel" replace />;
@@ -48,9 +56,9 @@ function Poort() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/kalender" element={<Kalender />} />
         <Route path="/match/:key" element={<MatchVerslag />} />
         <Route path="/meldingen" element={<MeldingenTest />} />
+        <Route path="/kalender" element={<Kalender />} />
         <Route path="/klassement" element={<Klassement />} />
         <Route path="/ploegen" element={<Ploegen />} />
         <Route path="/ploegen/:id" element={<PloegDetail />} />
@@ -58,7 +66,8 @@ function Poort() {
         <Route path="/opstelling" element={<Opstelling />} />
         <Route path="/leden" element={<Leden />} />
         <Route path="/leden/:id" element={<LidDetail />} />
-        <Route path="/profiel" element={<Profiel />} />
+        <Route path="/profiel" element={supporter ? <SupporterProfiel /> : <Profiel />} />
+        <Route path="/supporter-klassement" element={<SupporterKlassement />} />
         <Route path="/drive" element={<DriveBeheer />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

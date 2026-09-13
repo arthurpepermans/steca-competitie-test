@@ -1,3 +1,4 @@
+import { SupporterKlassement } from "../components/SupporterKlassement";
 import { useState } from "react";
 import { haalBoetes, haalKlassement, haalLedenBasis, haalMatches, haalStats, haalStandGeschiedenis, haalStemPunten, haalStemmers, haalWasbeurten } from "../lib/api";
 import { isSpelerLid, rechten, useAuth } from "../lib/auth";
@@ -26,7 +27,7 @@ const KOLOMMEN: { veld: keyof Totalen; label: string }[] = [
 export function Klassement() {
   const { lid } = useAuth();
   const r = rechten(lid);
-  const [tab, setTab] = useState<"klassement" | "stats" | "boetes" | "junior" | "wasmand">("klassement");
+  const [tab, setTab] = useState<"klassement" | "stats" | "boetes" | "junior" | "wasmand" | "supporters">("klassement");
   const [reeks, setReeks] = useState<string | null>(null);
   const [sorteer, setSorteer] = useState<keyof Totalen>("goals");
   const [invoerMatch, setInvoerMatch] = useState<string>("");
@@ -55,7 +56,7 @@ export function Klassement() {
   return (
     <>
       <Fout tekst={klassement.fout ?? matches.fout ?? stats.fout ?? boetes.fout ?? stemPunten.fout} />
-      <div className="tabs">
+      <div className="tabs"><button className={tab === "supporters" ? "actief" : ""} onClick={() => setTab("supporters")}>Supporters</button>
         <button className={tab === "klassement" ? "actief" : ""} onClick={() => setTab("klassement")}>Klassement</button>
         <button className={tab === "stats" ? "actief" : ""} onClick={() => setTab("stats")}>Statistieken</button>
         <button className={tab === "boetes" ? "actief" : ""} onClick={() => setTab("boetes")}>Boetepot</button>
@@ -63,6 +64,7 @@ export function Klassement() {
         <button className={tab === "wasmand" ? "actief" : ""} onClick={() => setTab("wasmand")}>Wasmand</button>
       </div>
 
+      {tab === "supporters" && <SupporterKlassement />}
       {tab === "klassement" && (
         <>
           <div className="veld">

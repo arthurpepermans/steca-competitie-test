@@ -1556,3 +1556,166 @@ create or replace view public.badges_met_volgorde with (security_invoker=true) a
  ) select b.id,b.badge_id,b.member_id,b.seizoen,b.match_key,b.aangemaakt_op,array_position(v.badges,b.badge_id) as volgorde,b.automatisch
  from gecombineerd b left join public.badge_voorkeuren v on v.member_id=b.member_id;
 insert into public.badge_voorkeuren select * from public.test_badge_voorkeuren on conflict do nothing;
+
+
+-- Supporteraanwezigheid: apart van de spelers en zonder extra schrijfrechten.
+create or replace function public.is_supporter_account() returns boolean
+language sql stable security definer set search_path=public as $$
+ select exists(select 1 from supporter_profiles where user_id=auth.uid() and actief);
+$$;
+revoke all on function public.is_supporter_account() from public,anon;
+grant execute on function public.is_supporter_account() to authenticated;
+
+create table if not exists public.supporter_attendance (
+ match_key text not null references public.matches(match_key) on delete cascade,
+ user_id uuid not null references public.supporter_profiles(user_id) on delete cascade,
+ status text not null check(status in ('aanwezig','afwezig','onzeker')),
+ updated_at timestamptz not null default now(),
+ primary key(match_key,user_id)
+);
+alter table public.supporter_attendance enable row level security;
+revoke all on public.supporter_attendance from anon,authenticated;
+grant all on public.supporter_attendance to service_role;
+
+-- Alleen namen en antwoorden, geen e-mailadressen of andere profielgegevens.
+create or replace function public.supporter_aanwezigheden() returns table(match_key text,user_id uuid,naam text,status text)
+language sql stable security definer set search_path=public as $$
+ select a.match_key,a.user_id,s.naam,a.status
+ from supporter_attendance a join supporter_profiles s on s.user_id=a.user_id
+ where s.actief and (is_actief() or is_supporter_account())
+ order by s.naam;
+$$;
+revoke all on function public.supporter_aanwezigheden() from public,anon;
+grant execute on function public.supporter_aanwezigheden() to authenticated;
+
+-- Geen user-id als invoer: een supporter kan uitsluitend zijn eigen antwoord zetten.
+create or replace function public.zet_supporter_aanwezigheid(p_match text,p_status text) returns void
+language plpgsql security definer set search_path=public as $$
+begin
+ perform 1 from supporter_profiles where user_id=auth.uid() and actief for share;
+ if not found then raise exception 'Log in met een actief supporteraccount.'; end if;
+ if p_status is null or p_status not in ('aanwezig','afwezig','onzeker') then raise exception 'Ongeldige aanwezigheid.'; end if;
+ perform 1 from matches where match_key=p_match and (thuis_id=152 or uit_id=152)
+  and status='gepland' and datum >= (now() at time zone 'Europe/Brussels')::date for share;
+ if not found then raise exception 'Je kunt alleen antwoorden voor een komende match van Steca Juniors.'; end if;
+ insert into supporter_attendance(match_key,user_id,status) values(p_match,auth.uid(),p_status)
+ on conflict(match_key,user_id) do update set status=excluded.status,updated_at=now();
+end;
+$$;
+revoke all on function public.zet_supporter_aanwezigheid(text,text) from public,anon;
+grant execute on function public.zet_supporter_aanwezigheid(text,text) to authenticated;
+
+-- Dezelfde leesweergave in de app, zonder lid te worden of stem-/stafrechten te krijgen.
+do $$
+declare tabel text;
+begin
+ foreach tabel in array array['attendance','lineups','lineup_players','match_stats','fines','laundry_turns','match_reports','ticker_messages'] loop
+  execute format('drop policy if exists supporter_app_lezen on public.%I',tabel);
+  execute format('create policy supporter_app_lezen on public.%I for select to authenticated using (public.is_supporter_account())',tabel);
+ end loop;
+end;
+$$;
+
+create or replace view public.match_vote_points as
+ select s.match_key,s.member_id,sum(s.punten)::int as punten,count(*)::int as stemmen
+ from (
+  select match_key,eerste as member_id,3 as punten from match_votes
+  union all select match_key,tweede,2 from match_votes
+  union all select match_key,derde,1 from match_votes
+ ) s where is_actief() or is_supporter_account() group by s.match_key,s.member_id;
+create or replace view public.match_vote_counts as
+ select match_key,count(*)::int as stemmers from match_votes
+ where is_actief() or is_supporter_account() group by match_key;
+
+
+
+-- Supportersklassement en badgeproef: uitsluitend de testapp.
+create table if not exists public.supporter_fans(id uuid primary key default gen_random_uuid(),user_id uuid unique references auth.users(id) on delete set null,naam text not null);
+create table if not exists public.supporter_bezoeken(persoon uuid references supporter_fans(id) on delete cascade,match text not null,primary key(persoon,match));
+create table if not exists public.supporter_proefmatches(id text primary key,seizoen text not null,datum date not null,uit boolean not null default false,gespeeld boolean not null default true,label text not null);
+create table if not exists public.supporter_seizoen_afgerond(seizoen text primary key);
+create table if not exists public.supporter_proefbadges(persoon uuid references supporter_fans(id) on delete cascade,badge text not null,seizoen text not null default '',primary key(persoon,badge,seizoen));
+alter table supporter_fans enable row level security;
+alter table supporter_bezoeken enable row level security;
+alter table supporter_proefmatches enable row level security;
+alter table supporter_seizoen_afgerond enable row level security;
+alter table supporter_proefbadges enable row level security;
+revoke all on supporter_fans,supporter_bezoeken,supporter_proefmatches,supporter_seizoen_afgerond,supporter_proefbadges from anon,authenticated;
+grant all on supporter_fans,supporter_bezoeken,supporter_proefmatches,supporter_seizoen_afgerond,supporter_proefbadges to service_role;
+
+create or replace function public.koppel_supporter_fan() returns trigger language plpgsql security definer set search_path=public as $$
+begin insert into supporter_fans(user_id,naam) values(new.user_id,new.naam) on conflict(user_id) do update set naam=excluded.naam;return new;end $$;
+drop trigger if exists supporter_fan_profiel on supporter_profiles;
+create trigger supporter_fan_profiel after insert or update of naam on supporter_profiles for each row execute function koppel_supporter_fan();
+insert into supporter_fans(user_id,naam) select user_id,naam from supporter_profiles on conflict(user_id) do update set naam=excluded.naam;
+
+create or replace function public.supporter_klassement_data() returns jsonb language plpgsql stable security definer set search_path=public as $$
+begin
+ if not (is_actief() or exists(select 1 from supporter_profiles where user_id=auth.uid() and actief)) then raise exception 'Log in met een actief account.';end if;
+ return jsonb_build_object(
+ 'personen',coalesce((select jsonb_agg(to_jsonb(p) order by naam) from supporter_fans p),'[]'::jsonb),
+ 'matches',coalesce((select jsonb_agg(to_jsonb(m)) from (
+ select match_key as id,seizoen,datum,(uit_id=152) as uit,(status='gespeeld' and match_aftrap(datum,uur)+interval '80 minutes'<=now()) as gespeeld,thuis||' - '||uit as label
+ from matches where (thuis_id=152 or uit_id=152) and datum is not null and coalesce(bron,'') not in ('push-test','test-invoer') and match_key<>'test-matchverslag-voorbeeld'
+ union all select id,seizoen,datum,uit,gespeeld and datum<=(now() at time zone 'Europe/Brussels')::date,label from supporter_proefmatches
+ ) m),'[]'::jsonb),
+ 'bezoeken',coalesce((select jsonb_agg(to_jsonb(b)) from (select persoon,match from supporter_bezoeken union select f.id,a.match_key from supporter_attendance a join supporter_fans f on f.user_id=a.user_id where a.status='aanwezig') b),'[]'::jsonb),
+ 'afgerond',coalesce((select jsonb_agg(seizoen) from supporter_seizoen_afgerond),'[]'::jsonb),
+ 'testbadges',coalesce((select jsonb_agg(jsonb_build_object('persoon',persoon,'badge',badge,'seizoen',nullif(seizoen,''))) from supporter_proefbadges),'[]'::jsonb));
+end $$;
+revoke all on function supporter_klassement_data() from public,anon;
+grant execute on function supporter_klassement_data() to authenticated;
+
+create or replace function public.supporter_testactie(p_actie text,p_data jsonb default '{}') returns void language plpgsql security definer set search_path=public as $$
+declare pid uuid; uid uuid; mk text; nm text; n int; s text; i int; aanwezig boolean;
+begin
+ if not coalesce(mag_testbadges_beheren(),false) then raise exception 'Alleen de aangewezen testbeheerder kan dit aanpassen.';end if;
+ s:=coalesce(nullif(p_data->>'seizoen',''),'2026-2027');
+ if s!~'^[0-9]{4}-[0-9]{4}$' then raise exception 'Ongeldig seizoen.';end if;
+ if p_actie='persoon' then
+  nm:=trim(p_data->>'naam');if nm is null or length(nm)<2 or length(nm)>100 then raise exception 'Vul een naam in.';end if;
+  insert into supporter_fans(naam) values(nm);
+ elsif p_actie='eerste_match' then
+  select match_key into mk from matches where (thuis_id=152 or uit_id=152) and seizoen=s and status='gespeeld' and coalesce(bron,'') not in ('push-test','test-invoer') and match_key<>'test-matchverslag-voorbeeld' order by datum,match_key limit 1;
+  if mk is null then
+   mk:='supporter-eerste-'||s;
+   insert into supporter_proefmatches values(mk,s,'2026-09-12',true,true,'Eerste match: FC Patron - Steca Juniors') on conflict(id) do nothing;
+  end if;
+  foreach nm in array array['Ben Osselaer','Falco Tas','Luca Van Ransbeeck','Yoon Selleslagh'] loop
+   select id into pid from supporter_fans where lower(naam)=lower(nm) order by user_id nulls last,id limit 1;
+   if pid is null then insert into supporter_fans(naam) values(nm) returning id into pid;end if;
+   insert into supporter_bezoeken values(pid,mk) on conflict do nothing;
+  end loop;
+ elsif p_actie='afsluiten' then
+  if (p_data->>'afgerond')::boolean then insert into supporter_seizoen_afgerond values(s) on conflict do nothing;
+  else delete from supporter_seizoen_afgerond where seizoen=s;end if;
+ else
+  pid:=(p_data->>'persoon')::uuid;
+  if not exists(select 1 from supporter_fans where id=pid) then raise exception 'Kies een supporter.';end if;
+  if p_actie='bezoek' then
+   mk:=p_data->>'match';
+   if not (exists(select 1 from matches where match_key=mk and (thuis_id=152 or uit_id=152)) or exists(select 1 from supporter_proefmatches where id=mk)) then raise exception 'Kies een Steca-match.';end if;
+   select user_id into uid from supporter_fans where id=pid;
+   if uid is not null and exists(select 1 from supporter_profiles where user_id=uid) and exists(select 1 from matches where match_key=mk) then
+    insert into supporter_attendance(match_key,user_id,status) values(mk,uid,case when (p_data->>'aanwezig')::boolean then 'aanwezig' else 'afwezig' end) on conflict(match_key,user_id) do update set status=excluded.status,updated_at=now();
+   end if;
+   if (p_data->>'aanwezig')::boolean then insert into supporter_bezoeken values(pid,mk) on conflict do nothing;else delete from supporter_bezoeken where persoon=pid and match=mk;end if;
+  elsif p_actie='badge' then
+   if coalesce(p_data->>'badge','') not in ('ultra_jaar','eeuwige_ultra','vaste_klant','prioriteiten','perfect_seizoen','first_away','away_crew','onderweg','zwart_wit','away_legend','away_icon','welkom','smaak','toog','hardcore','team','tribune','busje') then raise exception 'Onbekende badge.';end if;
+   if (p_data->>'toewijzen')::boolean then insert into supporter_proefbadges values(pid,p_data->>'badge',coalesce(p_data->>'badgeSeizoen','')) on conflict do nothing;
+   else delete from supporter_proefbadges where persoon=pid and badge=p_data->>'badge' and seizoen=coalesce(p_data->>'badgeSeizoen','');end if;
+  elsif p_actie='reeks' then
+   n:=(p_data->>'aantal')::int;if n not in(1,5,10,25,50,100) then raise exception 'Kies 1, 5, 10, 25, 50 of 100.';end if;
+   for i in 1..n loop
+    mk:='supporter-proef-'||s||'-'||lpad(i::text,3,'0');
+    insert into supporter_proefmatches values(mk,s,current_date-(n-i+1)*7,true,true,'Supporter-testmatch '||i) on conflict(id) do update set datum=excluded.datum;
+    insert into supporter_bezoeken values(pid,mk) on conflict do nothing;
+   end loop;
+  elsif p_actie='wis_reeks' then
+   delete from supporter_bezoeken where match in(select id from supporter_proefmatches where id like 'supporter-proef-%');
+   delete from supporter_proefmatches where id like 'supporter-proef-%';
+  else raise exception 'Onbekende actie.';end if;
+ end if;
+end $$;
+revoke all on function supporter_testactie(text,jsonb) from public,anon;
+grant execute on function supporter_testactie(text,jsonb) to authenticated;
