@@ -13,7 +13,7 @@ import { useAsync } from "../lib/useAsync";
 const KOPIEEN = 6;
 const TUSSENRUIMTE = 56;
 
-function useLichtkrant(tekst: string) {
+function useLichtkrant(tekst: string, wijn = false) {
   const band = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const b = band.current;
@@ -31,7 +31,7 @@ function useLichtkrant(tekst: string) {
     let vast = false;
     const teken = () => {
       const breedte = kopieen[0].offsetWidth;
-      const periode = breedte + TUSSENRUIMTE;
+      const periode = breedte + (wijn ? 0 : TUSSENRUIMTE);
       const totaal = KOPIEEN * periode;
       kopieen.forEach((k, i) => {
         let x = basis + i * periode;
@@ -64,15 +64,15 @@ function useLichtkrant(tekst: string) {
       b.removeEventListener("pointercancel", laatLos);
       b.removeEventListener("pointerleave", laatLos);
     };
-  }, [tekst]);
+  }, [tekst, wijn]);
   return band;
 }
 
 export function Band({ tekst,wijn=false }: { tekst: string;wijn?:boolean }) {
-  const band = useLichtkrant(tekst);
+  const band = useLichtkrant(tekst, wijn);
   return (
     <div className={"lichtkrant"+(wijn?" lichtkrant-wijn":"")} ref={band} role="marquee" aria-label="Clubnieuws">
-      {Array.from({ length: KOPIEEN }, (_, i) => <span key={i} aria-hidden={i > 0 || undefined}>{wijn?tekst.split(" / ").map((t,j)=><i key={j} className="lichtkrant-item">{t}<svg viewBox="0 0 16 40" width="9" height="23" aria-hidden="true" className="lichtkrant-fles"><path d="M6 2h4v12c0 3 3 4 3 7v16q0 2-2 2H5q-2 0-2-2V21c0-3 3-4 3-7Z" fill="currentColor"/><path d="M6 1h4v4H6zM4 25h8v9H4z" fill="#f5b5d1"/></svg></i>):tekst}</span>)}
+      {Array.from({ length: KOPIEEN }, (_, i) => <span key={i} aria-hidden={i > 0 || undefined}>{wijn?tekst.split(" / ").map((t,j)=><i key={j} className="lichtkrant-item"><svg viewBox="0 0 16 40" width="9" height="23" aria-hidden="true" className="lichtkrant-fles"><path d="M6 2h4v12c0 3 3 4 3 7v16q0 2-2 2H5q-2 0-2-2V21c0-3 3-4 3-7Z" fill="currentColor"/><path d="M6 1h4v4H6zM4 25h8v9H4z" fill="#f5b5d1"/></svg>{t}</i>):tekst}</span>)}
     </div>
   );
 }
