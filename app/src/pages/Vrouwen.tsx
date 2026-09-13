@@ -33,7 +33,9 @@ function Wedstrijd({match, groot=false}:{match:Match;groot?:boolean}) {
 
 export function Vrouwen() {
   const {pathname}=useLocation();
-  const {session}=useAuth();
+  const {session,lid,supporter}=useAuth();
+  const profielNaam=lid?.naam??supporter?.naam??String(session?.user.user_metadata?.naam??'');
+  const initialen=lid?`${lid.voornaam?.[0]??''}${lid.achternaam?.[0]??''}`:profielNaam.trim().split(/\s+/).filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase();
   const navRef=useNavViewport(pathname);
   const [data,setData]=useState<Data|null>(null);
   const [fout,setFout]=useState(false);
@@ -62,7 +64,7 @@ export function Vrouwen() {
   const clubActief=import.meta.env.VITE_PLOEGEN_ENABLED==='true';
   const tab=pathname.split('/')[2]??'';
   return <>
-    <header className="kop v-kop"><Link to="/vrouwen" className="clubmerk"><img src={logo} width="48" height="54" alt=""/><span>STECA VROUWEN<small>CLUBAPP</small></span></Link><Link className="v-ploegknop" to="/" aria-label="Wissel naar Steca Juniors" title="Steca Juniors"><img src={import.meta.env.BASE_URL+'logo-retro.png'} alt="Steca Juniors" width="42" height="48"/></Link><button className="thema-knop" onClick={()=>setDonker(!donker)} aria-label={donker?'Licht thema':'Donker thema'}>{donker?'☀':'☾'}</button><Link className="profiel-knop" to="/vrouwen/profiel" aria-label="Mijn profiel"><UsersThree size={24}/></Link></header>
+    <header className="kop v-kop"><Link to="/vrouwen" className="clubmerk"><img src={logo} width="48" height="54" alt=""/><span>STECA VROUWEN<small>CLUBAPP</small></span></Link><Link className="v-ploegknop" to="/" aria-label="Wissel naar Steca Juniors" title="Steca Juniors"><img src={import.meta.env.BASE_URL+'logo-retro.png'} alt="Steca Juniors" width="42" height="48"/></Link><button className="thema-knop" onClick={()=>setDonker(!donker)} aria-label={donker?'Licht thema':'Donker thema'}>{donker?'☀':'☾'}</button><Link className="profiel-knop" to="/vrouwen/profiel" aria-label="Mijn profiel"><span aria-hidden="true">{initialen||"SV"}</span></Link></header>
     <Band tekst={['STECA VROUWEN',komend[0]?`Volgende match: ${komend[0].thuis} tegen ${komend[0].uit} om ${uur(komend[0].aftrap)}`:'Samen op het veld. Samen Steca.','De derde helft: wijntjes drinken!'].join(' / ')}/>
     <main className="inhoud v-inhoud">{(tab==='klassement'||tab==='statistieken')&&<div className="tabs"><Link className={tab==='klassement'?'actief':''} to="/vrouwen/klassement">Klassement</Link><Link className={tab==='statistieken'?'actief':''} to="/vrouwen/statistieken">Statistieken</Link></div>}{clubActief&&<VrouwenClub kalenderBron={data} key={pathname} tab={tab} detail={pathname.split('/')[3]} stand={data?.klassementen[0]?.rijen.find(r=>r.naam==='STECA VROUWEN')} />}
       {fout?<div role="alert" className="melding fout">De wedstrijdgegevens konden niet geladen worden. <button onClick={()=>setPoging(p=>p+1)}>Opnieuw proberen</button></div>:!data?<p role="status">Wedstrijden laden…</p>:<>
