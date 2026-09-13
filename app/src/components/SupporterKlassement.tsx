@@ -1,3 +1,4 @@
+import {Shirt} from './Shirt';
 import {useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {supabase} from '../lib/supabase';
@@ -13,11 +14,12 @@ export function SupporterBadgeIcoon({badge:b}:{badge:FanBadge}){
  const G='#e2b63c',R='#f5eedb',Z='#292929';
  return <svg className="badge-icoon" viewBox="0 0 100 100" role="img" aria-label={b.titel}><circle cx="50" cy="50" r="48" fill={Z} stroke={R} strokeWidth="2"/>
  {b.icoon==='bus'?<g stroke={Z} strokeWidth="2"><rect x="20" y="24" width="60" height="46" rx="8" fill={G}/><rect x="27" y="31" width="46" height="21" rx="2" fill={R}/><path d="M50 31v21"/><circle cx="30" cy="61" r="4" fill={R}/><circle cx="70" cy="61" r="4" fill={R}/><path d="M27 71v5m46-5v5" stroke={R} strokeWidth="6"/></g>:
- b.icoon==='sjaal'?<g><path d="M18 30h64v24H18z" fill={R}/><path d="M30 30h13v24H30zm26 0h13v24H56z" fill={G}/><path d="M18 54v9m7-9v9m50-9v9m7-9v9" stroke={R} strokeWidth="3"/></g>:
- b.icoon==='shirt'?<g><path d="m33 24-15 9 7 16 10-5v30h30V44l10 5 7-16-15-9q-17 15-34 0" fill={R}/><path d="M35 45h30v13H35z" fill={G}/></g>:
+ b.icoon==='sjaal'?<g stroke={Z} strokeWidth="2" strokeLinejoin="round"><path d="M24 38h16v30H24zM60 38h16v30H60z" fill={R}/><path d="M24 49h16v7H24zM60 49h16v7H60z" fill={G}/><path d="M18 24q32 9 64 0v19q-32 9-64 0Z" fill={R}/><path d="M22 29q28 7 56 0v9q-28 7-56 0Z" fill={Z}/><text x="50" y="38" textAnchor="middle" fontSize="9" fontWeight="900" fontFamily="Arial" fill={G} stroke="none">STECA</text><path d="M26 68v6m6-6v6m6-6v6m24-6v6m6-6v6m6-6v6" stroke={R}/></g>:
+ b.icoon==='shirt'?<svg x="19" y="12" width="62" height="66"><Shirt label=""/></svg>:
  b.icoon==='kroon'?<path d="m21 32 15 10 14-22 14 22 15-10-7 36H28Z" fill={G} stroke={R} strokeWidth="2"/>:
  b.icoon==='beker'?<g fill="none" stroke={G} strokeWidth="5"><path d="M32 24h36v22q-2 17-18 17T32 46Z" fill={G}/><path d="M31 31H20v11q0 13 16 13m33-24h11v11q0 13-16 13M50 63v15m-15 2h30"/></g>:
  <path d="m50 19 9 20 23 2-17 16 5 23-20-12-20 12 5-23-17-16 23-2Z" fill={G}/>}
+ {b.id==='busje'&&<g stroke={Z} strokeWidth="2" strokeLinejoin="round"><path d="M15 49h12v27H15zM73 49h12v27H73z" fill={R}/><path d="M15 61h12v7H15zM73 61h12v7H73z" fill={G}/><path d="M13 43q37 12 74 0v15q-37 12-74 0Z" fill={R}/><path d="M18 47q32 10 64 0v7q-32 10-64 0Z" fill={Z}/><text x="50" y="57" textAnchor="middle" fontSize="8" fontFamily="Arial" fontWeight="900" fill={G} stroke="none">STECA</text><path d="M17 76v5m4-5v5m4-5v5m50-5v5m4-5v5m4-5v5" stroke={R}/></g>}
  {b.aantal&&<text x="50" y="87" textAnchor="middle" fontSize="23" fontWeight="900" fontFamily="Arial" fill={G} stroke={Z} strokeWidth="3" paintOrder="stroke">{b.aantal}</text>}
  </svg>;
 }
