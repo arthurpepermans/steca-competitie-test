@@ -61,6 +61,7 @@ export function Layout() {
           </Link>
         </div>
       </header>
+      {import.meta.env.VITE_PLOEGEN_ENABLED==='true'&&<p className="inhoud"><Link to="/vrouwen">Wissel naar Steca Vrouwen</Link></p>}
       <Lichtkrant />
       <main id="inhoud" className="inhoud" tabIndex={-1}><NieuweVersie /><SupporterAanwezigheidProvider><Outlet /></SupporterAanwezigheidProvider></main>
       <MeldingenPopup />
@@ -80,3 +81,4 @@ export function Laden({ tekst = "Laden…" }: { tekst?: string }) {
 export function Fout({ tekst }: { tekst: string | null }) {
   return tekst ? <div className="melding fout" role="alert">{tekst}</div> : null;
 }
+

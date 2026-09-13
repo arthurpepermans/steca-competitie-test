@@ -41,6 +41,7 @@ jobs:
       - run: npm test
       - name: Bouwen
         env:
+          VITE_PLOEGEN_ENABLED: 'true'
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           BASE_PATH: ${{ steps.pages.outputs.base_path }}/
@@ -62,3 +63,4 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+

@@ -9,6 +9,7 @@ function Kader({ titel, children }: { titel: string; children: React.ReactNode }
   return (
     <div className="auth">
       <h1>Steca Juniors Clubapp</h1>
+      {import.meta.env.VITE_PLOEGEN_ENABLED==='true'&&<p><Link to="/vrouwen">Naar Steca Vrouwen</Link></p>}
       <div className="kaart">
         <h2>{titel}</h2>
         {children}
@@ -192,3 +193,4 @@ export function Geblokkeerd({ tekst }: { tekst: string }) {
     </Kader>
   );
 }
+
