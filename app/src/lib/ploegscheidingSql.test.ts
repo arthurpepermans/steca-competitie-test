@@ -79,6 +79,18 @@ it('vereist aanwezigheid en speelstersrol bij de opstelling en beschermt tegen o
  await expect(db.exec(`select club_bewaar_opstelling('vrouwen','morgen','{"GK":"${beheer}"}','[]',1)`)).rejects.toThrow(/aanwezige/);
  await expect(db.exec(`select club_bewaar_opstelling('vrouwen','morgen','{"GK":"${lid}","LB":"${lid}"}','[]',1)`)).rejects.toThrow(/dubbel/);
 });
+it('laat actieve speelsters de opstelling opslaan zonder stafrechten, maar geen supporters of inactieve leden',async()=>{
+ await db.exec(`select set_config('test.uid','${vrouw}',false)`);
+ expect(await data()).toMatchObject({staf:false,admin:false});
+ await db.exec(`select club_bewaar_opstelling('vrouwen','morgen','{}','[]',0)`);
+ await expect(db.exec(`select club_bewaar_opstelling('vrouwen','gisteren','{}','[]',0)`)).rejects.toThrow(/afgesloten/);
+ await expect(db.exec(`select club_bewaar_opstelling('mannen','morgen','{}','[]',0)`)).rejects.toThrow(/opstellingsrechten/);
+ await db.exec(`reset role;update club_members set functie='supporter',speelt=false where id='${lid}';set role authenticated;`);
+ await expect(db.exec(`select club_bewaar_opstelling('vrouwen','morgen','{}','[]',1)`)).rejects.toThrow(/opstellingsrechten/);
+ await db.exec(`reset role;update club_members set functie='speler',speelt=true,status='inactief' where id='${lid}';set role authenticated;`);
+ await expect(db.exec(`select club_bewaar_opstelling('vrouwen','morgen','{}','[]',1)`)).rejects.toThrow(/opstellingsrechten/);
+ await db.exec(`reset role;update club_members set status='actief' where id='${lid}';set role authenticated;`);
+});
 it('houdt droomploegen privé en laat supporters een droomploeg maken',async()=>{
  await db.exec(`select club_bewaar_dream('vrouwen','{"GK":"${lid}"}',0)`);expect((await data()).dream.keuze.GK).toBe(lid);
  await db.exec(`select set_config('test.uid','${vrouw}',false)`);expect((await data()).dream).toBeNull();

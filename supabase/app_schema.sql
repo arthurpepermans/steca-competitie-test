@@ -1880,7 +1880,7 @@ declare k text; v text; gezien text[]:='{}';begin
 end $$;
 create or replace function public.club_bewaar_opstelling(p_club text,p_match text,p_keuze jsonb,p_slotjes jsonb,p_versie integer) returns integer language plpgsql security definer set search_path=public as $$
 declare v integer;begin
- if not club_staf(p_club) then raise exception 'Geen opstellingsrechten voor deze ploeg.';end if;
+ if not (coalesce(club_staf(p_club),false) or (p_club='vrouwen' and exists(select 1 from club_members where club_id=p_club and user_id=auth.uid() and status='actief' and speelt and functie<>'supporter'))) then raise exception 'Geen opstellingsrechten voor deze ploeg.';end if;
  perform pg_advisory_xact_lock(hashtextextended(p_club||p_match,0));
  select versie into v from club_lineups where club_id=p_club and match_key=p_match;
  if coalesce(v,0)<>p_versie then raise exception 'De opstelling is ondertussen gewijzigd. Herlaad eerst.';end if;
