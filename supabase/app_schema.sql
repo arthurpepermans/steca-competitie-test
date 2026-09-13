@@ -1814,7 +1814,7 @@ language plpgsql security definer set search_path=public as $$
 declare u uuid;
 begin
  if not club_staf(p_club) then raise exception 'Alleen de staf kan aanwezigheden aanpassen.';end if;
- if not exists(select 1 from club_matches where club_id=p_club and match_key=p_match and aftrap>now()) then raise exception 'Alleen voor een komende match.';end if;
+ if not exists(select 1 from club_matches where club_id=p_club and match_key=p_match ) then raise exception 'Wedstrijd niet gevonden.';end if;
  select user_id into u from club_members where club_id=p_club and id=p_lid and speelt and status='actief';
  if not found then raise exception 'Geen actieve speelster.';end if;
  if u is not null then

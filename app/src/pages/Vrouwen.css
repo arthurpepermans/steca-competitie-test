@@ -44,3 +44,5 @@
 .v-club .kaart.accent{margin-top:0;margin-bottom:18px}
 
 .v-club .verslag-invoer>fieldset{display:block}.v-club .verslag-invoer .verslag-momentinvoer{grid-template-columns:repeat(2,minmax(0,1fr))}.v-kop .profiel-knop{align-items:center;justify-content:center}
+
+.v-ploegenrij{border:0;background:none;font:inherit;white-space:normal;text-decoration:none;cursor:pointer;gap:12px}.v-ploegenrij>span:first-child{min-width:0;overflow-wrap:anywhere}.v-ploegenrij:focus-visible{outline:2px solid var(--tekst);outline-offset:5px}
