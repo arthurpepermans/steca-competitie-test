@@ -11,8 +11,10 @@
 [data-ploeg="vrouwen"] .match-affiche{background:#f5b5d1;color:#000;border-color:#000}
 [data-ploeg="vrouwen"] .match-affiche :is(.affiche-meta,.locatie-label,.team-boven,.team-onder,.versus,.match-terrein,.match-terrein a){color:#000;border-color:#000}
 [data-ploeg="vrouwen"] .match-moment{border-color:#000}
-[data-ploeg="vrouwen"] .club-embleem{background:#000;color:#fff;border-color:#f5b5d1;outline-color:#000}
-[data-ploeg="vrouwen"] .club-embleem strong{color:#f5b5d1}
+[data-ploeg="vrouwen"] .club-embleem{position:relative;isolation:isolate;overflow:hidden;background:#f5b5d1;color:#201b20;border-color:#201b20;outline-color:#f5b5d1}
+[data-ploeg="vrouwen"] .club-embleem::before{content:"";position:absolute;inset:0;z-index:-2;background:url('../assets/panterprint.svg') repeat;background-size:180px 160px;opacity:.18}
+[data-ploeg="vrouwen"] .club-embleem::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse at center,#f5b5d1 12%,#f5b5d1cc 50%,#f5b5d100 90%)}
+[data-ploeg="vrouwen"] .club-embleem strong{color:#201b20}
 [data-ploeg="vrouwen"] .lichtkrant{background:#f5b5d1;color:#000;border-color:#000}
 .v-ploegwissel{justify-content:flex-end;background:var(--achtergrond);padding-top:6px;padding-bottom:6px}
 .v-ploegwissel a{display:flex;align-items:center;justify-content:center;border:1px solid var(--rand);background:var(--kaart);border-radius:8px;padding:4px 10px}
