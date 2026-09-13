@@ -33,3 +33,8 @@ it('gebruikt de kalenderindeling met drie tabs, scorekaart en gespeelde matchen'
  const html=renderToStaticMarkup(<MemoryRouter><VrouwenKalender data={data}/></MemoryRouter>);
  for(const tekst of ['Steca Vrouwen','Hele reeks','Ploegen','gespeelde matchen tonen','uitslag','score gespeeld','2 - 0'])expect(html).toContain(tekst);
 });
+
+it('toont een gespeelde bronmatch ook wanneer die nog niet in clubgegevens staat',()=>{
+ const html=renderToStaticMarkup(<MemoryRouter><VrouwenKalender data={{...data,matches:[]}} bron={{seizoen:'2026-2027',klassementen:[],wedstrijden:[{id:1,thuis:'VEDETJES',uit:'STECA VROUWEN',aftrap:'2026-09-09T19:00:00+02:00',score:[21,0],locaties:[],reeks:'Dames Zele'}]}}/></MemoryRouter>);
+ expect(html).toContain('21 - 0');expect(html).toContain('VEDETJES');expect(html).toContain('verlies');
+});

@@ -25,12 +25,14 @@ export function VrouwenTicket({match,children}:{match:ClubMatch;children?:ReactN
  <div className="match-terrein"><MapPin size={20}/><span>{terrein??'Terrein nog niet bekend'}</span><MapsKnop terrein={match.locaties?.[0]?.adres??null}/></div></div>
  {children&&<div className="match-aanwezigheid">{children}</div>}</section>;
 }
-export type VrouwenKalenderBron={seizoen:string;reekswedstrijden?:{id:number;thuis:string;uit:string;aftrap:string;score:[number,number]|null;locaties:{zaal:string;adres:string}[];reeks:string}[];klassementen:{naam:string;rijen:{naam:string}[]}[]};
+export type VrouwenKalenderBron={seizoen:string;wedstrijden?:{id:number;thuis:string;uit:string;aftrap:string;score:[number,number]|null;locaties:{zaal:string;adres:string}[];reeks:string}[];reekswedstrijden?:{id:number;thuis:string;uit:string;aftrap:string;score:[number,number]|null;locaties:{zaal:string;adres:string}[];reeks:string}[];klassementen:{naam:string;rijen:{naam:string}[]}[]};
 export function VrouwenKalender({data,bron,inhoud,verslag}:{data:ClubData;bron?:VrouwenKalenderBron|null;inhoud?:(m:ClubMatch)=>ReactNode;verslag?:(m:ClubMatch)=>ReactNode}){
  const [tab,setTab]=useState('eigen'),[toonGespeeld,setToonGespeeld]=useState(true),[ploeg,setPloeg]=useState<string|null>(null);
  const eigen=(m:ClubMatch)=>m.thuis==='STECA VROUWEN'||m.uit==='STECA VROUWEN';
  const reeks=(bron?.reekswedstrijden??[]).map(m=>data.matches.find(c=>c.thuis===m.thuis&&c.uit===m.uit&&Date.parse(c.aftrap)===Date.parse(m.aftrap))??({match_key:'twizzit-'+m.id,seizoen:bron!.seizoen,aftrap:m.aftrap,thuis:m.thuis,uit:m.uit,thuis_score:m.score?.[0]??null,uit_score:m.score?.[1]??null,is_test:false,reeks:m.reeks,locaties:m.locaties}));
- const wedstrijden=(tab==='eigen'?data.matches:reeks).filter(m=>(!ploeg||m.thuis===ploeg||m.uit===ploeg)&&(toonGespeeld||m.thuis_score===null)).sort((a,b)=>a.aftrap.localeCompare(b.aftrap));
+ const eigenMatches=[...data.matches];
+ for(const m of bron?.wedstrijden??[]){const index=eigenMatches.findIndex(c=>c.thuis===m.thuis&&c.uit===m.uit&&Date.parse(c.aftrap)===Date.parse(m.aftrap));if(index<0)eigenMatches.push({match_key:'twizzit-'+m.id,seizoen:bron!.seizoen,aftrap:m.aftrap,thuis:m.thuis,uit:m.uit,thuis_score:m.score?.[0]??null,uit_score:m.score?.[1]??null,is_test:false,reeks:m.reeks,locaties:m.locaties});else if(m.score&&eigenMatches[index].thuis_score===null)eigenMatches[index]={...eigenMatches[index],thuis_score:m.score[0],uit_score:m.score[1]};}
+ const wedstrijden=(tab==='eigen'?eigenMatches:reeks).filter(m=>(!ploeg||m.thuis===ploeg||m.uit===ploeg)&&(toonGespeeld||m.thuis_score===null)).sort((a,b)=>a.aftrap.localeCompare(b.aftrap));
  const perDatum=new Map<string,ClubMatch[]>();for(const m of wedstrijden){const d=new Date(m.aftrap).toLocaleDateString('sv-SE',{timeZone:'Europe/Brussels'});perDatum.set(d,[...(perDatum.get(d)??[]),m]);}
  const ploegen=bron?.klassementen[0]?.rijen.map(r=>r.naam).sort((a,b)=>a.localeCompare(b))??[...new Set(data.matches.flatMap(m=>[m.thuis,m.uit]))].sort();
  return <><div className="tabs">{[['eigen','Steca Vrouwen'],['reeks','Hele reeks'],['ploegen','Ploegen']].map(([k,l])=><button key={k} className={tab===k?'actief':''} onClick={()=>{setTab(k);setPloeg(null);}}>{l}</button>)}</div>
