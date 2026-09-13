@@ -1,3 +1,4 @@
+import {supabase} from '../lib/supabase';
 import {Band} from '../components/Lichtkrant';
 import {useEffect, useState} from 'react';
 import {Link, NavLink, useLocation} from 'react-router-dom';
@@ -53,8 +54,7 @@ export function Vrouwen() {
   useEffect(()=>{window.scrollTo(0,0);},[pathname]);
   useEffect(()=>{
     const controller=new AbortController();setFout(false);
-    fetch(import.meta.env.BASE_URL+'vrouwen-data.json',{signal:controller.signal,cache:'no-cache'})
-      .then(r=>{if(!r.ok)throw Error();return r.json();}).then(d=>{if(!Array.isArray(d.wedstrijden)||!Array.isArray(d.klassementen))throw Error();setData(d);})
+    Promise.resolve(supabase.rpc('vrouwen_bron')).then(async({data,error})=>{if(!error&&data)return data;const r=await fetch(import.meta.env.BASE_URL+'vrouwen-data.json',{signal:controller.signal,cache:'no-cache'});if(!r.ok)throw Error();return r.json();}).then(d=>{if(!Array.isArray(d.wedstrijden)||!Array.isArray(d.klassementen))throw Error();setData(d);})
       .catch(e=>{if(e.name!=='AbortError')setFout(true);});
     return ()=>controller.abort();
   },[poging]);

@@ -2118,3 +2118,54 @@ begin
 end $$;
 revoke all on function club_claim_push(uuid) from public,anon,authenticated;
 grant execute on function club_claim_push(uuid) to service_role;
+
+-- Twizzit: afgeschermde worker, openbare broncache en adminaanvragen.
+create table if not exists public.vrouwen_sync (
+ id boolean primary key default true check(id), token_hash text not null,
+ data jsonb, laatste_succes timestamptz, aangevraagd timestamptz,
+ gestart timestamptz, afgerond timestamptz, run_id uuid, fout text
+);
+alter table vrouwen_sync enable row level security;
+revoke all on vrouwen_sync from anon,authenticated;
+create or replace function public.vrouwen_bron() returns jsonb language sql stable security definer set search_path=public as $$ select data from vrouwen_sync where id $$;
+grant execute on function vrouwen_bron() to anon,authenticated;
+create or replace function public.club_twizzit(p_club text,p_start boolean default false) returns jsonb language plpgsql security definer set search_path=public as $$
+declare r vrouwen_sync;begin
+ if p_club<>'vrouwen' or not club_admin(p_club) then raise exception 'Alleen een vrouwenadmin kan Twizzit bijwerken.';end if;
+ select * into r from vrouwen_sync where id for update;
+ if p_start and (r.aangevraagd is null or r.afgerond>=r.aangevraagd) and (r.gestart is null or r.afgerond>=r.gestart or r.gestart<now()-interval '10 minutes') then
+ update vrouwen_sync set aangevraagd=now(),fout=null where id returning * into r;
+ end if;
+ return jsonb_build_object('laatste_succes',r.laatste_succes,'wacht',r.aangevraagd is not null and (r.afgerond is null or r.aangevraagd>r.afgerond),'bezig',r.gestart>coalesce(r.afgerond,'epoch') and r.gestart>now()-interval '10 minutes','fout',r.fout);
+end $$;
+revoke all on function club_twizzit(text,boolean) from public;
+grant execute on function club_twizzit(text,boolean) to authenticated;
+create or replace function public.vrouwen_sync_worker(p_token text,p_actie text,p_id uuid default null,p_data jsonb default null) returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare r vrouwen_sync; lokaal timestamp:=now() at time zone 'Europe/Brussels'; due boolean; m jsonb;begin
+ select * into r from vrouwen_sync where id for update;
+ if r.token_hash is null or encode(digest(p_token,'sha256'),'hex') is distinct from r.token_hash then raise exception 'Geen toegang.';end if;
+ if p_actie='claim' then
+ if r.gestart>coalesce(r.afgerond,'epoch') and r.gestart>now()-interval '10 minutes' then return null;end if;
+ due:=r.laatste_succes is null or coalesce(r.aangevraagd>coalesce(r.afgerond,'epoch'),false);
+ -- Laatste dinsdag/woensdag/donderdag om 22u, inclusief gemiste scheduler-runs.
+ due:=due or exists(select 1 from generate_series(lokaal::date-6,lokaal::date,interval '1 day') d where extract(isodow from d) in(2,3,4) and d+interval '22 hours'<=lokaal and (d+interval '22 hours') at time zone 'Europe/Brussels'>coalesce(r.laatste_succes,'epoch'));
+ due:=due or exists(select 1 from club_matches where club_id='vrouwen' and not is_test and aftrap+interval '2 hours'<=now() and aftrap+interval '2 hours'>coalesce(r.laatste_succes,'epoch'));
+ if not due or (r.fout is not null and r.afgerond>now()-interval '10 minutes') then return null;end if;
+ update vrouwen_sync set gestart=now(),run_id=gen_random_uuid(),fout=null where id returning * into r;
+ return jsonb_build_object('id',r.run_id);
+ end if;
+ if p_id is distinct from r.run_id or r.afgerond>=r.gestart then raise exception 'Verlopen update.';end if;
+ if p_actie='fout' then update vrouwen_sync set afgerond=now(),fout='Twizzit ophalen mislukt. De vorige gegevens blijven behouden.' where id;return '{}'::jsonb;end if;
+ if p_actie<>'klaar' or jsonb_typeof(p_data->'wedstrijden') is distinct from 'array' or jsonb_array_length(p_data->'wedstrijden')=0 or jsonb_typeof(p_data->'klassementen') is distinct from 'array' or jsonb_array_length(p_data->'klassementen')=0 then raise exception 'Ongeldige Twizzit-gegevens.';end if;
+ perform club_import_matches(p_data);
+ -- Een handmatig ingevuld matchverslag blijft leidend; openbare uitslagen vullen de overige matchen aan.
+ for m in select * from jsonb_array_elements(p_data->'wedstrijden') loop
+ if m->'score'->>0 is not null then
+ update club_matches set thuis_score=(m->'score'->>0)::int,uit_score=(m->'score'->>1)::int,score_at=coalesce(score_at,now()) where club_id='vrouwen' and match_key='twizzit-'||(m->>'id') and not exists(select 1 from club_reports v where v.club_id='vrouwen' and v.match_key='twizzit-'||(m->>'id'));
+ end if;
+ end loop;
+ update vrouwen_sync set data=p_data,laatste_succes=gestart,afgerond=now(),fout=null where id;
+ return '{}'::jsonb;
+end $$;
+revoke all on function vrouwen_sync_worker(text,text,uuid,jsonb) from public;
+grant execute on function vrouwen_sync_worker(text,text,uuid,jsonb) to anon;
