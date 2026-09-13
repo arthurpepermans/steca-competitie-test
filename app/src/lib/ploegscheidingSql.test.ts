@@ -19,6 +19,8 @@ const sql=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.ur
 await db.exec('-- Ploegscheiding:'+sql);
 const registratie=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Ploegregistratie:')[1].split('-- Einde ploegregistratie.')[0];
 await db.exec('-- Ploegregistratie:'+registratie);
+const profiel=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Vrouwenprofielbeheer,')[1].split('-- Einde vrouwenprofielbeheer.')[0];
+await db.exec('-- Vrouwenprofielbeheer,'+profiel);
 const melding=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Ploegmeldingen:')[1].split('-- Alleen vrouwen-testcentrum.')[0];await db.exec('-- Ploegmeldingen:'+melding);
 await db.exec(`insert into club_members(id,club_id,user_id,naam,functie,speelt,is_admin) values('${lid}','vrouwen','${vrouw}','Speelster','speler',true,false),('${beheer}','vrouwen','${beheer}','Beheer','verantwoordelijke',false,true);
 insert into club_matches(club_id,match_key,seizoen,aftrap,thuis,uit) values('vrouwen','morgen','2026-2027',now()+interval '1 day','STECA VROUWEN','Andere'),('vrouwen','gisteren','2026-2027',now()-interval '1 day','Andere','STECA VROUWEN');`);
@@ -47,6 +49,13 @@ it('hergebruikt bestaande accounts en verandert mannenrechten of aangepaste vrou
  await db.exec(`delete from club_members where user_id='${man}';update auth.users set email=null,email_confirmed_at=null where id='${man}';`);
 });
 it('een mannenadmin is uitsluitend supporter bij de vrouwen',async()=>{expect(await data()).toMatchObject({rol:'supporter',admin:false,staf:false});await expect(db.exec(`select club_zet_lid('vrouwen','${man}','verantwoordelijke',false,true)`)).rejects.toThrow(/beheerder/);});
+it('laat alleen vrouwenbeheerders de functie op een vrouwenprofiel aanpassen',async()=>{
+ await expect(db.exec(`select club_wijzig_lid('vrouwen','${lid}','coach',false)`)).rejects.toThrow(/beheerder/);
+ await db.exec(`select set_config('test.uid','${beheer}',false);select club_wijzig_lid('vrouwen','${lid}','supporter',true);`);
+ expect((await data()).leden.find((l:any)=>l.id===lid)).toMatchObject({functie:'supporter',speelt:false});
+ await expect(db.exec(`select club_wijzig_lid('vrouwen','${beheer}','supporter',false)`)).rejects.toThrow(/beheerdersrol/);
+ await db.exec(`select club_wijzig_lid('vrouwen','${lid}','speler',true);`);
+});
 it('een supporterantwoord telt niet als speler',async()=>{await db.exec("select club_aanwezig('vrouwen','morgen','aanwezig')");expect((await data()).aanwezigheden[0].speler).toBe(false);await expect(db.exec(`select club_aanwezig('vrouwen','morgen','aanwezig','${vrouw}')`)).rejects.toThrow(/bevoegdheid/);});
 it('kan zichzelf niet via een rolverzoek promoveren',async()=>{await db.exec("select club_vraag_rol('vrouwen','verantwoordelijke')");expect(await data()).toMatchObject({rol:'supporter',admin:false,staf:false});});
 it('blokkeert directe tabelschrijfacties en helper-RPCs',async()=>{await expect(db.exec(`update club_members set is_admin=true`)).rejects.toThrow(/permission denied/);await expect(db.exec(`select club_import_matches('{}')`)).rejects.toThrow(/permission denied/);await expect(db.exec(`select club_naam('${vrouw}')`)).rejects.toThrow(/permission denied/);});
@@ -62,6 +71,16 @@ it('vereist aanwezigheid en speelstersrol bij de opstelling en beschermt tegen o
 it('houdt droomploegen privé en laat supporters een droomploeg maken',async()=>{
  await db.exec(`select club_bewaar_dream('vrouwen','{"GK":"${lid}"}',0)`);expect((await data()).dream.keuze.GK).toBe(lid);
  await db.exec(`select set_config('test.uid','${vrouw}',false)`);expect((await data()).dream).toBeNull();
+});
+it('laat de staf een ingeschreven speelster zonder account aanwezig zetten en op de bank selecteren',async()=>{
+ const reserve='30000000-0000-0000-0000-000000000001';
+ await db.exec(`reset role;insert into club_members(id,club_id,naam,functie,speelt) values('${reserve}','vrouwen','Reserve zonder login','speler',true);set role authenticated;`);
+ await expect(db.exec(`select club_aanwezig_lid('vrouwen','morgen','${reserve}','aanwezig')`)).rejects.toThrow(/staf/);
+ await db.exec(`select set_config('test.uid','${beheer}',false);select club_aanwezig_lid('vrouwen','morgen','${reserve}','aanwezig');select club_bewaar_opstelling('vrouwen','morgen','{"BANK5":"${reserve}"}','[]',0);`);
+ expect((await data()).aanwezigheden.find((a:any)=>a.member_id===reserve)).toMatchObject({naam:'Reserve zonder login',status:'aanwezig',speler:true});
+ await db.exec(`select club_aanwezig_lid('vrouwen','morgen','${reserve}','afwezig');`);
+ await expect(db.exec(`select club_bewaar_opstelling('vrouwen','morgen','{"BANK5":"${reserve}"}','[]',1)`)).rejects.toThrow(/aanwezige/);
+ await db.exec(`reset role;delete from club_members where id='${reserve}';`);
 });
 it('verbergt andermans pronos voor de aftrap en sluit gespeelde matches af',async()=>{
  await db.exec("select club_bewaar_prono('vrouwen','morgen',2,1)");expect((await data()).pronos).toHaveLength(1);

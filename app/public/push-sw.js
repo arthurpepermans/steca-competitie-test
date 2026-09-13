@@ -5,7 +5,7 @@ self.addEventListener('push', event => {
   let data = {};
   try { data = event.data?.json() ?? {}; } catch { /* Ook een ongeldig bericht blijft zichtbaar. */ }
   event.waitUntil(self.registration.showNotification(data.title || 'Steca Juniors Test', {
-    body: data.body || 'Er staat een nieuwe melding in de testapp.', icon: './icon-retro-192.png',
+    body: data.body || 'Er staat een nieuwe melding in de testapp.', icon: data.club === 'vrouwen' ? './logo-vrouwen.png' : './icon-retro-192.png',
     tag: data.tag || 'steca-test', data: { url: data.url || self.location.origin + '/#/meldingen' }
   }));
 });
