@@ -68,7 +68,7 @@ function useLichtkrant(tekst: string) {
   return band;
 }
 
-function Band({ tekst }: { tekst: string }) {
+export function Band({ tekst }: { tekst: string }) {
   const band = useLichtkrant(tekst);
   return (
     <div className="lichtkrant" ref={band} role="marquee" aria-label="Clubnieuws">
