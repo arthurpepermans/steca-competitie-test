@@ -14,7 +14,7 @@ export function Ploegkeuze({ploeg}:{ploeg:'mannen'|'vrouwen'}){
  document.addEventListener('pointerdown',buiten);document.addEventListener('keydown',toets);
  return()=>{document.removeEventListener('pointerdown',buiten);document.removeEventListener('keydown',toets);};
  },[open]);
- return <div className="ploegkeuze" ref={vak} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setOpen(false);}}>
+ return <div className="ploegkeuze" ref={vak} onBlur={e=>{/* Safari geeft bij een tik soms geen nieuw focusdoel: laat de link eerst zijn klik verwerken. */if(e.relatedTarget&&!e.currentTarget.contains(e.relatedTarget as Node))setOpen(false);}}>
  <button ref={knop} type="button" className="clubmerk ploegkeuze-knop" aria-expanded={open} aria-controls="ploegkeuze-lijst" aria-label={'Ploeg kiezen: '+actief.naam} onClick={()=>setOpen(v=>!v)}>
  <img src={import.meta.env.BASE_URL+actief.logo} width="44" height="52" alt=""/><span>{actief.naam}<small>CLUBAPP</small></span><CaretDown className="ploegkeuze-pijl" size={14} aria-hidden="true"/>
  </button>
