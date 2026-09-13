@@ -32,3 +32,7 @@
 [data-ploeg="vrouwen"] .kantine-prive{background:var(--accent);border-color:#000;color:#000}
 .v-club .tabs>a{flex:1;padding:12px;text-align:center;text-decoration:none;color:var(--tekst)}.v-club .tabs>a.actief{background:var(--kaart);font-weight:700}
 .v-club .prono-invoer input{width:80px;margin:8px auto;text-align:center;font-size:1.5rem}
+
+/* Gelijke schildverhouding als het mannenlogo, met behoud van transparantie. */
+[data-ploeg="vrouwen"] img[src*="logo-vrouwen-transparant"]{object-fit:contain;scale:.88 1;flex-shrink:0}
+
