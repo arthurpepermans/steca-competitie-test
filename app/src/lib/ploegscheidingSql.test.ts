@@ -10,9 +10,10 @@ create role anon;create role authenticated;create role service_role;
 create schema auth;create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}',email text,email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.uid',true),'')::uuid$$;
 create table members(id uuid,user_id uuid,naam text,status text,is_admin boolean);
+create function public.is_admin() returns boolean language sql security definer as $$select exists(select 1 from members where user_id=auth.uid() and status='actief' and is_admin)$$;
 create table supporter_profiles(user_id uuid,naam text,actief boolean);
 insert into auth.users(id) values('${man}'),('${vrouw}'),('${beheer}');
-insert into members values('${man}','${man}','Mannenadmin','actief',true);
+insert into members values('${man}','${man}','Mannenadmin','actief',true),('${beheer}','${beheer}','Gedeelde beheerder','actief',true);
 insert into supporter_profiles values('${vrouw}','Speelster',true),('${beheer}','Vrouwenbeheer',true);
 `);
 const sql=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Ploegscheiding:')[1].split('-- Einde ploegscheiding.')[0];
@@ -48,16 +49,26 @@ it('hergebruikt bestaande accounts en verandert mannenrechten of aangepaste vrou
  expect((await db.query<{is_admin:boolean}>(`select is_admin from members where user_id='${man}'`)).rows[0].is_admin).toBe(true);
  await db.exec(`delete from club_members where user_id='${man}';update auth.users set email=null,email_confirmed_at=null where id='${man}';`);
 });
-it('een mannenadmin is uitsluitend supporter bij de vrouwen',async()=>{expect(await data()).toMatchObject({rol:'supporter',admin:false,staf:false});await expect(db.exec(`select club_zet_lid('vrouwen','${man}','verantwoordelijke',false,true)`)).rejects.toThrow(/beheerder/);});
+it('een centrale admin beheert beide ploegen zonder aparte vrouwenrol',async()=>{
+ expect(await data()).toMatchObject({rol:'supporter',admin:true,staf:true});
+ await db.exec("reset role");
+ expect((await db.query("select club_admin('onbekend') admin")).rows[0]).toEqual({admin:false});
+});
+it('een lokale adminvlag geeft geen centrale adminrechten',async()=>{
+ await db.exec(`reset role;update club_members set is_admin=true where id='${lid}';select set_config('test.uid','${vrouw}',false);set role authenticated;`);
+ expect(await data()).toMatchObject({admin:false});
+ await db.exec(`reset role;update club_members set is_admin=false where id='${lid}';set role authenticated;`);
+});
 it('laat alleen vrouwenbeheerders de functie op een vrouwenprofiel aanpassen',async()=>{
+ await db.exec(`select set_config('test.uid','${vrouw}',false)`);
  await expect(db.exec(`select club_wijzig_lid('vrouwen','${lid}','coach',false)`)).rejects.toThrow(/beheerder/);
  await db.exec(`select set_config('test.uid','${beheer}',false);select club_wijzig_lid('vrouwen','${lid}','supporter',true);`);
  expect((await data()).leden.find((l:any)=>l.id===lid)).toMatchObject({functie:'supporter',speelt:false});
  await expect(db.exec(`select club_wijzig_lid('vrouwen','${beheer}','supporter',false)`)).rejects.toThrow(/beheerdersrol/);
  await db.exec(`select club_wijzig_lid('vrouwen','${lid}','speler',true);`);
 });
-it('een supporterantwoord telt niet als speler',async()=>{await db.exec("select club_aanwezig('vrouwen','morgen','aanwezig')");expect((await data()).aanwezigheden[0].speler).toBe(false);await expect(db.exec(`select club_aanwezig('vrouwen','morgen','aanwezig','${vrouw}')`)).rejects.toThrow(/bevoegdheid/);});
-it('kan zichzelf niet via een rolverzoek promoveren',async()=>{await db.exec("select club_vraag_rol('vrouwen','verantwoordelijke')");expect(await data()).toMatchObject({rol:'supporter',admin:false,staf:false});});
+it('een supporterantwoord telt niet als speler',async()=>{await db.exec("select club_aanwezig('vrouwen','morgen','aanwezig')");expect((await data()).aanwezigheden[0].speler).toBe(false);await db.exec(`select set_config('test.uid','${vrouw}',false)`);await expect(db.exec(`select club_aanwezig('vrouwen','morgen','aanwezig','${man}')`)).rejects.toThrow(/bevoegdheid/);});
+it('kan zichzelf niet via een rolverzoek promoveren',async()=>{await db.exec(`select set_config('test.uid','${vrouw}',false)`);await db.exec("select club_vraag_rol('vrouwen','verantwoordelijke')");expect(await data()).toMatchObject({rol:'speler',admin:false,staf:false});});
 it('blokkeert directe tabelschrijfacties en helper-RPCs',async()=>{await expect(db.exec(`update club_members set is_admin=true`)).rejects.toThrow(/permission denied/);await expect(db.exec(`select club_import_matches('{}')`)).rejects.toThrow(/permission denied/);await expect(db.exec(`select club_naam('${vrouw}')`)).rejects.toThrow(/permission denied/);});
 it('weigert een andere ploeg en anonieme toegang',async()=>{await expect(db.exec("select club_data('mannen')")).rejects.toThrow(/actief account/);await db.exec('reset role;set role anon');await expect(db.exec("select club_data('vrouwen')")).rejects.toThrow(/permission denied/);});
 it('vereist aanwezigheid en speelstersrol bij de opstelling en beschermt tegen overschrijven',async()=>{
@@ -75,6 +86,7 @@ it('houdt droomploegen privé en laat supporters een droomploeg maken',async()=>
 it('laat de staf een ingeschreven speelster zonder account aanwezig zetten en op de bank selecteren',async()=>{
  const reserve='30000000-0000-0000-0000-000000000001';
  await db.exec(`reset role;insert into club_members(id,club_id,naam,functie,speelt) values('${reserve}','vrouwen','Reserve zonder login','speler',true);set role authenticated;`);
+ await db.exec(`select set_config('test.uid','${vrouw}',false)`);
  await expect(db.exec(`select club_aanwezig_lid('vrouwen','morgen','${reserve}','aanwezig')`)).rejects.toThrow(/staf/);
  await db.exec(`select set_config('test.uid','${beheer}',false);select club_aanwezig_lid('vrouwen','morgen','${reserve}','aanwezig');select club_bewaar_opstelling('vrouwen','morgen','{"BANK5":"${reserve}"}','[]',0);`);
  expect((await data()).aanwezigheden.find((a:any)=>a.member_id===reserve)).toMatchObject({naam:'Reserve zonder login',status:'aanwezig',speler:true});

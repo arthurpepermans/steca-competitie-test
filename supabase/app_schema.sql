@@ -1738,7 +1738,7 @@ create or replace function public.club_role(p_club text) returns text language s
  select case when p_club='vrouwen' and auth.uid() is not null then coalesce((select case when status='actief' then functie else 'geblokkeerd' end from club_members where club_id=p_club and user_id=auth.uid()),'supporter') else 'geblokkeerd' end
 $$;
 create or replace function public.club_admin(p_club text) returns boolean language sql stable security definer set search_path=public as $$
- select exists(select 1 from club_members where club_id=p_club and user_id=auth.uid() and status='actief' and is_admin)
+ select p_club='vrouwen' and public.is_admin()
 $$;
 create or replace function public.club_staf(p_club text) returns boolean language sql stable security definer set search_path=public as $$
  select club_admin(p_club) or club_role(p_club) in ('coach','spelercoach','verantwoordelijke')
@@ -1855,9 +1855,9 @@ create or replace function public.club_zet_lid(p_club text,p_user uuid,p_functie
 begin
  if not club_admin(p_club) then raise exception 'Alleen een beheerder van deze ploeg.';end if;
  perform pg_advisory_xact_lock(hashtextextended('clubbeheer-'||p_club,0));
- if p_user=auth.uid() and (not p_admin or p_status<>'actief') then raise exception 'Je kunt jezelf niet als beheerder uitschakelen.';end if;
- if p_functie='supporter' and (p_speelt or p_admin) then raise exception 'Een supporter kan niet opgesteld worden of beheerder zijn.';end if;
- insert into club_members(club_id,user_id,naam,functie,speelt,is_admin,status) values(p_club,p_user,club_naam(p_user),p_functie,p_speelt,p_admin,p_status)
+ if p_user=auth.uid() and p_status<>'actief' then raise exception 'Je kunt jezelf niet als beheerder uitschakelen.';end if;
+ if p_functie='supporter' and p_speelt then raise exception 'Een supporter kan niet opgesteld worden of beheerder zijn.';end if;
+ insert into club_members(club_id,user_id,naam,functie,speelt,is_admin,status) values(p_club,p_user,club_naam(p_user),p_functie,p_speelt,exists(select 1 from members where user_id=p_user and status='actief' and is_admin),p_status)
  on conflict(club_id,user_id) do update set functie=excluded.functie,speelt=excluded.speelt,is_admin=excluded.is_admin,status=excluded.status;
  delete from club_role_requests where club_id=p_club and user_id=p_user;
 end $$;
