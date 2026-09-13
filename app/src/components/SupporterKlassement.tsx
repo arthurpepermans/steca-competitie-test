@@ -13,13 +13,21 @@ function useFans(){const [v,setV]=useState(0);useEffect(()=>{const f=()=>setV(x=
 export function SupporterBadgeIcoon({badge:b}:{badge:FanBadge}){
  const G='#e2b63c',R='#f5eedb',Z='#292929';
  return <svg className="badge-icoon" viewBox="0 0 100 100" role="img" aria-label={b.titel}><circle cx="50" cy="50" r="48" fill={Z} stroke={R} strokeWidth="2"/>
- {b.icoon==='bus'?<g stroke={Z} strokeWidth="2"><rect x="20" y="24" width="60" height="46" rx="8" fill={G}/><rect x="27" y="31" width="46" height="21" rx="2" fill={R}/><path d="M50 31v21"/><circle cx="30" cy="61" r="4" fill={R}/><circle cx="70" cy="61" r="4" fill={R}/><path d="M27 71v5m46-5v5" stroke={R} strokeWidth="6"/></g>:
- b.icoon==='sjaal'?<g stroke={Z} strokeWidth="2" strokeLinejoin="round"><path d="M24 38h16v30H24zM60 38h16v30H60z" fill={R}/><path d="M24 49h16v7H24zM60 49h16v7H60z" fill={G}/><path d="M18 24q32 9 64 0v19q-32 9-64 0Z" fill={R}/><path d="M22 29q28 7 56 0v9q-28 7-56 0Z" fill={Z}/><text x="50" y="38" textAnchor="middle" fontSize="9" fontWeight="900" fontFamily="Arial" fill={G} stroke="none">STECA</text><path d="M26 68v6m6-6v6m6-6v6m24-6v6m6-6v6m6-6v6" stroke={R}/></g>:
+ {b.id==='busje'?<g stroke={Z} strokeWidth="2" strokeLinejoin="round">
+   <path d="M18 33q0-5 5-5h48q7 0 10 8l5 15v13H18Z" fill={G}/>
+   <path d="M24 34h13v16H24zm18 0h13v16H42zm18 0h12l6 16H60Z" fill={R}/>
+   <path d="M19 56h66" fill="none"/>
+   <circle cx="31" cy="65" r="8" fill={Z} stroke={R}/><circle cx="72" cy="65" r="8" fill={Z} stroke={R}/>
+   <circle cx="31" cy="65" r="3" fill={G}/><circle cx="72" cy="65" r="3" fill={G}/>
+   <path d="M35 42q-9 4-17-3L9 32v13q9 12 26 6Z" fill="#fff"/>
+   <path d="m14 36 5 4v13l-5-3Zm11 6 5 1v9l-5 1Z" fill="#171717" stroke="none"/>
+   <path d="M9 33H5m4 5H5m4 5H5" stroke="#fff"/>
+  </g>:b.icoon==='bus'?<g stroke={Z} strokeWidth="2"><rect x="20" y="24" width="60" height="46" rx="8" fill={G}/><rect x="27" y="31" width="46" height="21" rx="2" fill={R}/><path d="M50 31v21"/><circle cx="30" cy="61" r="4" fill={R}/><circle cx="70" cy="61" r="4" fill={R}/><path d="M27 71v5m46-5v5" stroke={R} strokeWidth="6"/></g>:
+ b.icoon==='sjaal'?<g stroke={Z} strokeWidth="2" strokeLinejoin="round"><path d="M24 38h16v30H24zM60 38h16v30H60z" fill="#fff"/><path d="M24 49h16v7H24zM60 49h16v7H60z" fill="#171717"/><path d="M18 24q32 9 64 0v19q-32 9-64 0Z" fill="#fff"/><path d="M22 29q28 7 56 0v9q-28 7-56 0Z" fill="#171717"/><path d="M26 68v6m6-6v6m6-6v6m24-6v6m6-6v6m6-6v6" stroke="#fff"/></g>:
  b.icoon==='shirt'?<svg x="19" y="12" width="62" height="66"><Shirt label=""/></svg>:
  b.icoon==='kroon'?<path d="m21 32 15 10 14-22 14 22 15-10-7 36H28Z" fill={G} stroke={R} strokeWidth="2"/>:
  b.icoon==='beker'?<g fill="none" stroke={G} strokeWidth="5"><path d="M32 24h36v22q-2 17-18 17T32 46Z" fill={G}/><path d="M31 31H20v11q0 13 16 13m33-24h11v11q0 13-16 13M50 63v15m-15 2h30"/></g>:
  <path d="m50 19 9 20 23 2-17 16 5 23-20-12-20 12 5-23-17-16 23-2Z" fill={G}/>}
- {b.id==='busje'&&<g stroke={Z} strokeWidth="2" strokeLinejoin="round"><path d="M15 49h12v27H15zM73 49h12v27H73z" fill={R}/><path d="M15 61h12v7H15zM73 61h12v7H73z" fill={G}/><path d="M13 43q37 12 74 0v15q-37 12-74 0Z" fill={R}/><path d="M18 47q32 10 64 0v7q-32 10-64 0Z" fill={Z}/><text x="50" y="57" textAnchor="middle" fontSize="8" fontFamily="Arial" fontWeight="900" fill={G} stroke="none">STECA</text><path d="M17 76v5m4-5v5m4-5v5m50-5v5m4-5v5m4-5v5" stroke={R}/></g>}
  {b.aantal&&<text x="50" y="87" textAnchor="middle" fontSize="23" fontWeight="900" fontFamily="Arial" fill={G} stroke={Z} strokeWidth="3" paintOrder="stroke">{b.aantal}</text>}
  </svg>;
 }
