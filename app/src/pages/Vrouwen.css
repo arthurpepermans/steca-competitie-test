@@ -28,3 +28,7 @@
 .v-kop .v-ploegknop img{width:32px;height:38px;object-fit:contain}
 .v-kop .thema-knop,.v-kop .profiel-knop{flex-shrink:0}
 @media(max-width:500px){.v-kop{gap:7px;padding-left:12px;padding-right:12px}.v-kop .clubmerk{gap:7px;min-width:0}.v-kop .clubmerk>span{font-size:18px}.v-kop .clubmerk img{width:33px;height:40px}.v-kop .v-ploegknop,.v-kop .thema-knop,.v-kop .profiel-knop{width:36px;height:40px}}
+
+[data-ploeg="vrouwen"] .kantine-prive{background:var(--accent);border-color:#000;color:#000}
+.v-club .tabs>a{flex:1;padding:12px;text-align:center;text-decoration:none;color:var(--tekst)}.v-club .tabs>a.actief{background:var(--kaart);font-weight:700}
+.v-club .prono-invoer input{width:80px;margin:8px auto;text-align:center;font-size:1.5rem}
