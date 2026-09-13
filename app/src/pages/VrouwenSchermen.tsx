@@ -25,12 +25,28 @@ export function VrouwenTicket({match,children}:{match:ClubMatch;children?:ReactN
  <div className="match-terrein"><MapPin size={20}/><span>{terrein??'Terrein nog niet bekend'}</span><MapsKnop terrein={match.locaties?.[0]?.adres??null}/></div></div>
  {children&&<div className="match-aanwezigheid">{children}</div>}</section>;
 }
-export function VrouwenKalender({data}:{data:ClubData}){
- const [filter,setFilter]=useState('komend');
- const wedstrijden=data.matches.filter(m=>filter==='alles'||(filter==='komend'?Date.parse(m.aftrap)>Date.now():Date.parse(m.aftrap)<=Date.now())).sort((a,b)=>filter==='gespeeld'?b.aftrap.localeCompare(a.aftrap):a.aftrap.localeCompare(b.aftrap));
- return <><h1>Kalender</h1><div className="tabs">{[['komend','Komend'],['gespeeld','Gespeeld'],['alles','Alles']].map(([k,l])=><button key={k} className={filter===k?'actief':''} onClick={()=>setFilter(k)}>{l}</button>)}</div>
- {wedstrijden.map(m=><article className="kaart accent" key={m.match_key}><div className="rij zacht"><span>{vrouwenDatum(m.aftrap)} · {vrouwenUur(m.aftrap)}</span><span>{m.reeks??'Dames Zele'}</span></div><div className="uitslag"><div>{m.thuis}</div><div className="score">{m.thuis_score===null?vrouwenUur(m.aftrap):`${m.thuis_score} - ${m.uit_score}`}</div><div>{m.uit}</div></div><div className="rij"><span className="zacht">{m.locaties?.map(l=>[l.zaal,l.adres].filter(Boolean).join(' · ')).join(' / ')||'Terrein nog niet bekend'}</span><MapsKnop terrein={m.locaties?.[0]?.adres??null}/></div><p><Link className="knop licht klein" to={'/vrouwen/match/'+encodeURIComponent(m.match_key)}>Matchverslag bekijken</Link> <Link className="knop licht klein" to={'/vrouwen/opstelling/'+encodeURIComponent(m.match_key)}>Opstelling</Link></p></article>)}
- {!wedstrijden.length&&<p className="zacht">Geen wedstrijden in deze periode.</p>}</>;
+export type VrouwenKalenderBron={seizoen:string;reekswedstrijden?:{id:number;thuis:string;uit:string;aftrap:string;score:[number,number]|null;locaties:{zaal:string;adres:string}[];reeks:string}[];klassementen:{naam:string;rijen:{naam:string}[]}[]};
+export function VrouwenKalender({data,bron,inhoud}:{data:ClubData;bron?:VrouwenKalenderBron|null;inhoud?:(m:ClubMatch)=>ReactNode}){
+ const [tab,setTab]=useState('eigen'),[toonGespeeld,setToonGespeeld]=useState(true),[ploeg,setPloeg]=useState<string|null>(null);
+ const eigen=(m:ClubMatch)=>m.thuis==='STECA VROUWEN'||m.uit==='STECA VROUWEN';
+ const reeks=(bron?.reekswedstrijden??[]).map(m=>data.matches.find(c=>c.thuis===m.thuis&&c.uit===m.uit&&Date.parse(c.aftrap)===Date.parse(m.aftrap))??({match_key:'twizzit-'+m.id,seizoen:bron!.seizoen,aftrap:m.aftrap,thuis:m.thuis,uit:m.uit,thuis_score:m.score?.[0]??null,uit_score:m.score?.[1]??null,is_test:false,reeks:m.reeks,locaties:m.locaties}));
+ const wedstrijden=(tab==='eigen'?data.matches:reeks).filter(m=>(!ploeg||m.thuis===ploeg||m.uit===ploeg)&&(toonGespeeld||m.thuis_score===null)).sort((a,b)=>a.aftrap.localeCompare(b.aftrap));
+ const perDatum=new Map<string,ClubMatch[]>();for(const m of wedstrijden){const d=new Date(m.aftrap).toLocaleDateString('sv-SE',{timeZone:'Europe/Brussels'});perDatum.set(d,[...(perDatum.get(d)??[]),m]);}
+ const ploegen=bron?.klassementen[0]?.rijen.map(r=>r.naam).sort((a,b)=>a.localeCompare(b))??[...new Set(data.matches.flatMap(m=>[m.thuis,m.uit]))].sort();
+ return <><div className="tabs">{[['eigen','Steca Vrouwen'],['reeks','Hele reeks'],['ploegen','Ploegen']].map(([k,l])=><button key={k} className={tab===k?'actief':''} onClick={()=>{setTab(k);setPloeg(null);}}>{l}</button>)}</div>
+ {tab==='ploegen'&&!ploeg?<><div className="veld"><select aria-label="Reeks"><option>{bron?.klassementen[0]?.naam??'Dames Zele'}</option></select></div><ul className="lijst omrand">{ploegen.map(naam=>{const thuis=reeks.find(m=>m.thuis===naam&&m.locaties?.length);return <li key={naam}><button className="rij tekst-knop v-ploegenrij" onClick={()=>setPloeg(naam)}><span><strong>{naam}</strong><br/><span className="zacht klein">{thuis?.locaties?.map(l=>[l.zaal,l.adres].filter(Boolean).join(' · ')).join(' / ')??'Terrein onbekend'}</span></span><span>›</span></button></li>;})}</ul></>:<>
+ {ploeg&&<><button className="knop licht klein" onClick={()=>setPloeg(null)}>‹ Alle ploegen</button><h2>{ploeg}</h2></>}
+ <label className="klein zacht" style={{display:'block',marginBottom:10}}><input type="checkbox" checked={toonGespeeld} onChange={e=>setToonGespeeld(e.target.checked)}/> gespeelde matchen tonen</label>
+ {[...perDatum.entries()].map(([datum,ms])=><section key={datum}>{tab!=='eigen'&&<h3 style={{marginTop:12}}>{vrouwenDatum(ms[0].aftrap)}</h3>}{ms.map(m=><VrouwenKalenderKaart key={m.match_key} match={m} toonDatum={tab==='eigen'}>{eigen(m)&&data.matches.some(x=>x.match_key===m.match_key)?inhoud?.(m):null}</VrouwenKalenderKaart>)}</section>)}
+ {!wedstrijden.length&&<div className="kaart zacht">Geen matchen gevonden.</div>}</>}</>;
+}
+function VrouwenKalenderKaart({match:m,toonDatum,children}:{match:ClubMatch;toonDatum:boolean;children?:ReactNode}){
+ const thuis=m.thuis==='STECA VROUWEN',uit=m.uit==='STECA VROUWEN',gespeeld=m.thuis_score!==null&&m.uit_score!==null;
+ const verschil=gespeeld?(m.thuis_score!-m.uit_score!)*(thuis?1:-1):0,res=gespeeld&&(thuis||uit)?verschil>0?'winst':verschil<0?'verlies':'gelijk':null;
+ return <article className={'kaart '+(thuis||uit?'accent':'')}>{toonDatum&&<div className="rij zacht" style={{marginBottom:6}}><span>{vrouwenDatum(m.aftrap)} · {vrouwenUur(m.aftrap)}</span><span>{m.reeks??'Dames Zele'}</span></div>}
+ <div className="uitslag"><div className="thuis" style={{fontWeight:thuis?700:400}}>{m.thuis}</div><div className={'score '+(gespeeld?'gespeeld':'gepland')}>{gespeeld?`${m.thuis_score} - ${m.uit_score}`:vrouwenUur(m.aftrap)}</div><div style={{fontWeight:uit?700:400}}>{m.uit}</div></div>
+ <div className="rij" style={{marginTop:8}}><span className="zacht">{m.locaties?.map(l=>[l.zaal,l.adres].filter(Boolean).join(' · ')).join(' / ')||'Terrein onbekend'}</span><span className="rij" style={{gap:6}}>{res&&<span className={'res '+res}>{res}</span>}<MapsKnop terrein={m.locaties?.[0]?.adres??null}/></span></div>
+ {children&&<><div className="ticket-scheur" aria-hidden="true"/>{children}</>}</article>;
 }
 export function VrouwenHome({data,children,stand}:{data:ClubData;children?:ReactNode;stand?:{positie:number;punten:number;gespeeld:number;voor:number}}){
  const komend=data.matches.filter(m=>Date.parse(m.aftrap)>Date.now()&&m.thuis_score===null).sort((a,b)=>a.aftrap.localeCompare(b.aftrap));

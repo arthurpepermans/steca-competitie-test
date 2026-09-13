@@ -2,7 +2,7 @@ import {it,expect} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MemoryRouter} from 'react-router-dom';
 import {Tactiekbord} from '../components/Veld';
-import {VrouwenTicket,supporterCijfers,vrouwenSupporters} from '../pages/VrouwenSchermen';
+import {VrouwenKalender,VrouwenTicket,supporterCijfers,vrouwenSupporters} from '../pages/VrouwenSchermen';
 import {clubStatistieken,type ClubData} from './club';
 const match={match_key:'afgelopen',seizoen:'2026-2027',aftrap:'2026-08-01T18:00:00Z',thuis:'STECA VROUWEN',uit:'Tegenstander',thuis_score:2,uit_score:0,is_test:true};
 const data={leden:[{id:'veld',user_id:'speler',speelt:true,functie:'speler'}],pronoleden:[{user_id:'speler',naam:'Speelster'},{user_id:'fan',naam:'Supporter'}],matches:[match,{...match,match_key:'oud',seizoen:'2025-2026'}],opstellingen:[{match_key:'afgelopen',keuze:{GK:'veld',BANK5:'bank'}}],verslagen:[],aanwezigheden:[{match_key:'afgelopen',user_id:'fan',speler:false,status:'aanwezig'},{match_key:'afgelopen',user_id:'speler',speler:true,status:'aanwezig'}]} as unknown as ClubData;
@@ -28,3 +28,8 @@ it('houdt supporters en speelsters gescheiden en telt alleen bijgewoonde gespeel
  expect(supporterCijfers(data,'fan','2025-2026').matches).toHaveLength(0);
 });
 
+
+it('gebruikt de kalenderindeling met drie tabs, scorekaart en gespeelde matchen',()=>{
+ const html=renderToStaticMarkup(<MemoryRouter><VrouwenKalender data={data}/></MemoryRouter>);
+ for(const tekst of ['Steca Vrouwen','Hele reeks','Ploegen','gespeelde matchen tonen','uitslag','score gespeeld','2 - 0'])expect(html).toContain(tekst);
+});
