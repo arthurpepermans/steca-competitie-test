@@ -7,7 +7,7 @@ const man='00000000-0000-0000-0000-000000000001',vrouw='00000000-0000-0000-0000-
 const lid='10000000-0000-0000-0000-000000000002';
 beforeAll(async()=>{db=new PGlite();await db.exec(`
 create role anon;create role authenticated;create role service_role;
-create schema auth;create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}');
+create schema auth;create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}',email text,email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.uid',true),'')::uuid$$;
 create table members(id uuid,user_id uuid,naam text,status text,is_admin boolean);
 create table supporter_profiles(user_id uuid,naam text,actief boolean);
@@ -17,6 +17,8 @@ insert into supporter_profiles values('${vrouw}','Speelster',true),('${beheer}',
 `);
 const sql=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Ploegscheiding:')[1].split('-- Einde ploegscheiding.')[0];
 await db.exec('-- Ploegscheiding:'+sql);
+const registratie=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Ploegregistratie:')[1].split('-- Einde ploegregistratie.')[0];
+await db.exec('-- Ploegregistratie:'+registratie);
 const melding=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Ploegmeldingen:')[1].split('-- Alleen vrouwen-testcentrum.')[0];await db.exec('-- Ploegmeldingen:'+melding);
 await db.exec(`insert into club_members(id,club_id,user_id,naam,functie,speelt,is_admin) values('${lid}','vrouwen','${vrouw}','Speelster','speler',true,false),('${beheer}','vrouwen','${beheer}','Beheer','verantwoordelijke',false,true);
 insert into club_matches(club_id,match_key,seizoen,aftrap,thuis,uit) values('vrouwen','morgen','2026-2027',now()+interval '1 day','STECA VROUWEN','Andere'),('vrouwen','gisteren','2026-2027',now()-interval '1 day','Andere','STECA VROUWEN');`);
@@ -24,6 +26,26 @@ insert into club_matches(club_id,match_key,seizoen,aftrap,thuis,uit) values('vro
 afterAll(async()=>await db.close());
 beforeEach(async()=>{await db.exec(`reset role;truncate club_attendance,club_lineups,club_dream,club_predictions,club_role_requests,club_push_jobs,club_push_preferences;select set_config('test.uid','${man}',false);set role authenticated;`);});
 async function data(){return (await db.query<{d:any}>("select club_data('vrouwen') d")).rows[0].d;}
+it('koppelt een ingeschreven speelster pas na e-mailbevestiging en houdt haar mail privé',async()=>{
+ await expect(db.exec(`select club_import_members('[]')`)).rejects.toThrow(/permission denied/);
+ await expect(db.exec(`select * from club_registration`)).rejects.toThrow(/permission denied/);
+ await db.exec(`reset role;select club_import_members('[{"naam":"Ingeschreven Speelster","email":"inschrijving@example.invalid","functie":"speler"}]');
+ insert into auth.users(id,email,raw_user_meta_data) values('20000000-0000-0000-0000-000000000001','inschrijving@example.invalid','{"club":"vrouwen","club_functie":"speler"}');`);
+ expect((await db.query<{user_id:string|null}>(`select user_id from club_members where naam='Ingeschreven Speelster'`)).rows[0].user_id).toBeNull();
+ await db.exec(`update auth.users set email_confirmed_at=now() where email='inschrijving@example.invalid';select set_config('test.uid','20000000-0000-0000-0000-000000000001',false);set role authenticated;`);
+ expect(await data()).toMatchObject({rol:'speler',admin:false});
+ expect(JSON.stringify(await data())).not.toContain('inschrijving@example.invalid');
+ await db.exec(`reset role;delete from club_members where naam='Ingeschreven Speelster';delete from auth.users where email='inschrijving@example.invalid';`);
+});
+it('hergebruikt bestaande accounts en verandert mannenrechten of aangepaste vrouwenrollen niet',async()=>{
+ await db.exec(`reset role;update auth.users set email='bestaand@example.invalid',email_confirmed_at=now() where id='${man}';
+ select club_import_members('[{"naam":"Bestaande staf","email":"bestaand@example.invalid","functie":"verantwoordelijke"}]');`);
+ expect((await db.query(`select functie,is_admin,speelt from club_members where user_id='${man}'`)).rows[0]).toMatchObject({functie:'verantwoordelijke',is_admin:false,speelt:false});
+ await db.exec(`update club_members set functie='supporter' where user_id='${man}';select club_import_members('[{"naam":"Bestaande staf","email":"bestaand@example.invalid","functie":"verantwoordelijke"}]');`);
+ expect((await db.query<{functie:string}>(`select functie from club_members where user_id='${man}'`)).rows[0].functie).toBe('supporter');
+ expect((await db.query<{is_admin:boolean}>(`select is_admin from members where user_id='${man}'`)).rows[0].is_admin).toBe(true);
+ await db.exec(`delete from club_members where user_id='${man}';update auth.users set email=null,email_confirmed_at=null where id='${man}';`);
+});
 it('een mannenadmin is uitsluitend supporter bij de vrouwen',async()=>{expect(await data()).toMatchObject({rol:'supporter',admin:false,staf:false});await expect(db.exec(`select club_zet_lid('vrouwen','${man}','verantwoordelijke',false,true)`)).rejects.toThrow(/beheerder/);});
 it('een supporterantwoord telt niet als speler',async()=>{await db.exec("select club_aanwezig('vrouwen','morgen','aanwezig')");expect((await data()).aanwezigheden[0].speler).toBe(false);await expect(db.exec(`select club_aanwezig('vrouwen','morgen','aanwezig','${vrouw}')`)).rejects.toThrow(/bevoegdheid/);});
 it('kan zichzelf niet via een rolverzoek promoveren',async()=>{await db.exec("select club_vraag_rol('vrouwen','verantwoordelijke')");expect(await data()).toMatchObject({rol:'supporter',admin:false,staf:false});});
