@@ -1841,7 +1841,7 @@ create or replace function public.club_controle_keuze(p_club text,p_keuze jsonb,
 declare k text; v text; gezien text[]:='{}';begin
  if jsonb_typeof(p_keuze)<>'object' or length(p_keuze::text)>8000 then raise exception 'Ongeldige opstelling.';end if;
  for k,v in select * from jsonb_each_text(p_keuze) loop
- if k not in ('GK','LB','RB','LW','RW','BANK1','BANK2','BANK3','BANK4','BANK5','BANK6','BANK7') then raise exception 'Onbekende positie.';end if;
+ if k not in ('GK','LB','RB','LW','RW','BANK1','BANK2','BANK3','BANK4','BANK5') then raise exception 'Onbekende positie.';end if;
  if v is null or v='' then continue;end if;
  if v=any(gezien) then raise exception 'Iemand staat dubbel in de opstelling.';end if;gezien:=array_append(gezien,v);
  if not exists(select 1 from club_members m where m.club_id=p_club and m.id::text=v and m.status='actief' and m.speelt and (p_match is null or exists(select 1 from club_attendance a where a.club_id=p_club and a.match_key=p_match and a.user_id=m.user_id and a.status='aanwezig'))) then raise exception 'Alleen aanwezige speelsters van deze ploeg kunnen geselecteerd worden.';end if;
