@@ -27,7 +27,7 @@ export function KalenderTicket({toonDatum=true,datum,uur,reeks,thuis,uit,eigenTh
  return <div className={`kaart ${eigenThuis||eigenUit?'accent':''}`}>
  {toonDatum&&<div className="rij zacht" style={{marginBottom:6}}><span>{datum}{uur?` · ${uur}`:''}</span><span>{reeks}</span></div>}
  <div className="uitslag"><div className="thuis" style={{fontWeight:eigenThuis?700:400}}>{thuis}</div><div className={`score ${status}`}>{scoreTekst}</div><div style={{fontWeight:eigenUit?700:400}}>{uit}</div></div>
- <div className="rij" style={{marginTop:8}}><span className="zacht">{terrein??'terrein onbekend'}</span><span className="rij" style={{gap:6}}>{res&&<span className={`res ${res}`}>{res}</span>}<MapsKnop terrein={terrein??null}/></span></div>
+ <div className="rij kalender-locatie" style={{marginTop:8}}><span className="zacht">{terrein??'terrein onbekend'}</span><span className="rij kalender-route" style={{gap:6}}>{res&&<span className={`res ${res}`}>{res}</span>}<MapsKnop terrein={terrein??null}/></span></div>
  {opmerking&&<div className="klein zacht" style={{marginTop:4}}>{opmerking}</div>}
  {verslagKnop}{children&&<div className="ticket-scheur" aria-hidden="true"/>}{children}
  </div>;
