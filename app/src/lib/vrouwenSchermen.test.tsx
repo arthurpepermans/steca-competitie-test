@@ -14,7 +14,7 @@ it('gebruikt dezelfde veldtekening met vijf vrouwenbankplaatsen en vier mannenba
 });
 it('toont het ticket met vrouwenlogo, aftrap en de juiste route',()=>{
  const html=renderToStaticMarkup(<MemoryRouter><VrouwenTicket match={{...match,locaties:[{zaal:'Sporthal',adres:'Voorbeeldstraat 1'}]}}/></MemoryRouter>);
- expect(html).toContain('WEDSTRIJDTICKET');expect(html).toContain('logo-vrouwen.png');expect(html).toContain('Voorbeeldstraat');expect(html).toContain('Tegenstander');
+ expect(html).toContain('WEDSTRIJDTICKET');expect(html).toContain('logo-vrouwen-transparant.png');expect(html).toContain('Voorbeeldstraat');expect(html).toContain('Tegenstander');
 });
 it('telt de vijfde bankplaats mee en beperkt cijfers tot het gekozen seizoen',()=>{
  expect(clubStatistieken(data,'bank','2026-2027').gespeeld).toBe(1);
@@ -27,3 +27,4 @@ it('houdt supporters en speelsters gescheiden en telt alleen bijgewoonde gespeel
  expect(supporterCijfers(data,'speler').matches).toHaveLength(0);
  expect(supporterCijfers(data,'fan','2025-2026').matches).toHaveLength(0);
 });
+

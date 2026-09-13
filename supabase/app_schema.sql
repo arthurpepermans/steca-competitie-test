@@ -1841,6 +1841,7 @@ begin
  'pronos',coalesce((select jsonb_agg(to_jsonb(p)) from club_predictions p join club_matches m using(club_id,match_key) where p.club_id=p_club and (p.user_id=auth.uid() or m.aftrap<=now())),'[]'),
  'dream',(select to_jsonb(d) from club_dream d where club_id=p_club and user_id=auth.uid()),
  'stemmen',coalesce((select jsonb_agg(to_jsonb(v)) from club_votes v where club_id=p_club and user_id=auth.uid()),'[]'),
+ 'stempunten',coalesce((select jsonb_agg(to_jsonb(r)) from (select v.match_key,k.member_id,sum(k.punten)::int punten,count(*)::int stemmen from club_votes v join club_matches m on m.club_id=v.club_id and m.match_key=v.match_key cross join lateral (values(v.eerste,3),(v.tweede,2),(v.derde,1)) k(member_id,punten) where v.club_id=p_club and m.thuis_score is not null and m.aftrap+interval '80 minutes'<=now() group by v.match_key,k.member_id) r),'[]'),
  'wasmand',coalesce((select jsonb_agg(to_jsonb(l)) from club_laundry l where club_id=p_club),'[]'),
  'pronoleden',coalesce((select jsonb_agg(jsonb_build_object('user_id',u.id,'naam',club_naam(u.id))) from auth.users u where exists(select 1 from members m where m.user_id=u.id and m.status='actief') or exists(select 1 from supporter_profiles s where s.user_id=u.id and s.actief)),'[]')
  );
