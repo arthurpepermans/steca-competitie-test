@@ -68,11 +68,11 @@ function useLichtkrant(tekst: string) {
   return band;
 }
 
-export function Band({ tekst }: { tekst: string }) {
+export function Band({ tekst,wijn=false }: { tekst: string;wijn?:boolean }) {
   const band = useLichtkrant(tekst);
   return (
     <div className="lichtkrant" ref={band} role="marquee" aria-label="Clubnieuws">
-      {Array.from({ length: KOPIEEN }, (_, i) => <span key={i} aria-hidden={i > 0 || undefined}>{tekst}</span>)}
+      {Array.from({ length: KOPIEEN }, (_, i) => <span key={i} aria-hidden={i > 0 || undefined}>{wijn?tekst.split(" / ").map((t,j)=><i key={j} style={{fontStyle:"normal"}}>{t}<svg viewBox="0 0 20 32" width="15" height="25" aria-hidden="true" style={{verticalAlign:"middle",margin:"0 22px"}}><path d="M7 2h6v9l4 5v14H3V16l4-5Z" fill="currentColor"/><path d="M7 1h6v4H7zM5 19h10v7H5z" fill="#f5b5d1"/></svg></i>):tekst}</span>)}
     </div>
   );
 }
