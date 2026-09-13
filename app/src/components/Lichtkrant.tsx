@@ -72,7 +72,7 @@ export function Band({ tekst,wijn=false }: { tekst: string;wijn?:boolean }) {
   const band = useLichtkrant(tekst);
   return (
     <div className={"lichtkrant"+(wijn?" lichtkrant-wijn":"")} ref={band} role="marquee" aria-label="Clubnieuws">
-      {Array.from({ length: KOPIEEN }, (_, i) => <span key={i} aria-hidden={i > 0 || undefined}>{wijn?tekst.split(" / ").map((t,j)=><i key={j} className="lichtkrant-item">{t}<svg viewBox="0 0 20 32" width="12" height="19" aria-hidden="true" className="lichtkrant-fles"><path d="M7 2h6v9l4 5v14H3V16l4-5Z" fill="currentColor"/><path d="M7 1h6v4H7zM5 19h10v7H5z" fill="#f5b5d1"/></svg></i>):tekst}</span>)}
+      {Array.from({ length: KOPIEEN }, (_, i) => <span key={i} aria-hidden={i > 0 || undefined}>{wijn?tekst.split(" / ").map((t,j)=><i key={j} className="lichtkrant-item">{t}<svg viewBox="0 0 16 40" width="9" height="23" aria-hidden="true" className="lichtkrant-fles"><path d="M6 2h4v12c0 3 3 4 3 7v16q0 2-2 2H5q-2 0-2-2V21c0-3 3-4 3-7Z" fill="currentColor"/><path d="M6 1h4v4H6zM4 25h8v9H4z" fill="#f5b5d1"/></svg></i>):tekst}</span>)}
     </div>
   );
 }
