@@ -45,7 +45,7 @@ export function VrouwenKalender({data,bron,inhoud,verslag}:{data:ClubData;bron?:
 function VrouwenKalenderKaart({match:m,toonDatum,children,verslagKnop}:{match:ClubMatch;toonDatum:boolean;children?:ReactNode;verslagKnop?:ReactNode}){
  const thuis=m.thuis==='STECA VROUWEN',uit=m.uit==='STECA VROUWEN',gespeeld=m.thuis_score!==null&&m.uit_score!==null;
  const verschil=gespeeld?(m.thuis_score!-m.uit_score!)*(thuis?1:-1):0,res=gespeeld&&(thuis||uit)?verschil>0?'winst':verschil<0?'verlies':'gelijk':null;
- return <KalenderTicket toonDatum={toonDatum} datum={vrouwenDatum(m.aftrap)} uur={vrouwenUur(m.aftrap)} reeks={m.reeks??'Dames Zele'} thuis={m.thuis} uit={m.uit} eigenThuis={thuis} eigenUit={uit} status={gespeeld?'gespeeld':'gepland'} scoreTekst={gespeeld?`${m.thuis_score} - ${m.uit_score}`:vrouwenUur(m.aftrap)} terrein={m.locaties?.map(l=>[l.zaal,l.adres].filter(Boolean).join(' · ')).join(' / ')||null} res={res} verslagKnop={verslagKnop}>{children}</KalenderTicket>;
+ return <KalenderTicket ticketScheur={thuis||uit} toonDatum={toonDatum} datum={vrouwenDatum(m.aftrap)} uur={vrouwenUur(m.aftrap)} reeks={m.reeks??'Dames Zele'} thuis={m.thuis} uit={m.uit} eigenThuis={thuis} eigenUit={uit} status={gespeeld?'gespeeld':'gepland'} scoreTekst={gespeeld?`${m.thuis_score} - ${m.uit_score}`:vrouwenUur(m.aftrap)} terrein={m.locaties?.map(l=>[l.zaal,l.adres].filter(Boolean).join(' · ')).join(' / ')||null} res={res} verslagKnop={verslagKnop}>{children}</KalenderTicket>;
 }
 export function VrouwenHome({data,children,stand}:{data:ClubData;children?:ReactNode;stand?:{positie:number;punten:number;gespeeld:number;voor:number}}){
  const komend=data.matches.filter(m=>Date.parse(m.aftrap)>Date.now()&&m.thuis_score===null).sort((a,b)=>a.aftrap.localeCompare(b.aftrap));
