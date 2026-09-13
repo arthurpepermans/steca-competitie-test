@@ -72,7 +72,7 @@ export function Band({ tekst,wijn=false }: { tekst: string;wijn?:boolean }) {
   const band = useLichtkrant(tekst, wijn);
   return (
     <div className={"lichtkrant"+(wijn?" lichtkrant-wijn":"")} ref={band} role="marquee" aria-label="Clubnieuws">
-      {Array.from({ length: KOPIEEN }, (_, i) => <span key={i} aria-hidden={i > 0 || undefined}>{wijn?tekst.split(" / ").map((t,j)=><i key={j} className="lichtkrant-item"><svg viewBox="0 0 16 40" width="9" height="23" aria-hidden="true" className="lichtkrant-fles"><path d="M6 2h4v12c0 3 3 4 3 7v16q0 2-2 2H5q-2 0-2-2V21c0-3 3-4 3-7Z" fill="currentColor"/><path d="M6 1h4v4H6zM4 25h8v9H4z" fill="#f5b5d1"/></svg>{t}</i>):tekst}</span>)}
+      {Array.from({ length: KOPIEEN }, (_, i) => <span key={i} aria-hidden={i > 0 || undefined}>{wijn?tekst.split(" / ").map((t,j)=><i key={j} className="lichtkrant-item"><svg viewBox="0 0 78 40" width="45" height="23" aria-hidden="true" className="lichtkrant-fles"><path d="M6 2h4v12c0 3 3 4 3 7v16q0 2-2 2H5q-2 0-2-2V21c0-3 3-4 3-7Z" fill="currentColor"/><path d="M6 1h4v4H6zM4 25h8v9H4z" fill="#f5b5d1"/>{[20,39,58].map(x=><g key={x} transform={`translate(${x} 0)`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h10l2 11c1 6-2 10-7 10S0 26 1 20Z"/><path d="M8 30v8m-5 0h10"/><path d="M2 20h12"/><path d="M3 22c0 4 2 6 5 6s5-2 5-6" fill="currentColor" stroke="none"/></g>)}</svg>{t}</i>):tekst}</span>)}
     </div>
   );
 }
