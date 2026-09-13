@@ -454,4 +454,4 @@ html,body,#root{touch-action:pan-x pan-y}
 
 .kalender-locatie{flex-wrap:wrap}.kalender-locatie>.zacht{flex:1 1 180px;min-width:0;overflow-wrap:anywhere}.kalender-route{flex:0 0 auto;white-space:nowrap;margin-left:auto}.kalender-route .res{width:auto;min-width:25px;padding:0 7px;flex-shrink:0}.kalender-route .knop{flex-shrink:0}
 
-.lichtkrant-wijn>span{top:0;height:100%;display:inline-flex;align-items:center}.lichtkrant-item{display:inline-flex;align-items:center;height:100%;font-style:normal}.lichtkrant-fles{display:block;flex-shrink:0;margin:0 22px}
+.lichtkrant-wijn>span{top:0;height:100%;display:inline-flex;align-items:center}.lichtkrant-item{display:inline-flex;align-items:center;height:100%;font-style:normal}.lichtkrant-fles{display:block;flex-shrink:0;margin:0 8px 0 14px}
