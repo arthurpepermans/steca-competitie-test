@@ -5,7 +5,7 @@ import {CalendarBlank} from '@phosphor-icons/react/dist/csr/CalendarBlank';
 import {MapPin} from '@phosphor-icons/react/dist/csr/MapPin';
 import {ArrowUpRight} from '@phosphor-icons/react/dist/csr/ArrowUpRight';
 import {Aftelling} from '../components/Aftelling';
-import {MapsKnop} from '../components/MatchKaart';
+import {KalenderTicket,MapsKnop} from '../components/MatchKaart';
 import {clubRpc,clubStatistieken,type ClubData,type ClubMatch} from '../lib/club';
 
 export const vrouwenDatum=(iso:string)=>new Date(iso).toLocaleDateString('nl-BE',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Brussels'});
@@ -26,7 +26,7 @@ export function VrouwenTicket({match,children}:{match:ClubMatch;children?:ReactN
  {children&&<div className="match-aanwezigheid">{children}</div>}</section>;
 }
 export type VrouwenKalenderBron={seizoen:string;reekswedstrijden?:{id:number;thuis:string;uit:string;aftrap:string;score:[number,number]|null;locaties:{zaal:string;adres:string}[];reeks:string}[];klassementen:{naam:string;rijen:{naam:string}[]}[]};
-export function VrouwenKalender({data,bron,inhoud}:{data:ClubData;bron?:VrouwenKalenderBron|null;inhoud?:(m:ClubMatch)=>ReactNode}){
+export function VrouwenKalender({data,bron,inhoud,verslag}:{data:ClubData;bron?:VrouwenKalenderBron|null;inhoud?:(m:ClubMatch)=>ReactNode;verslag?:(m:ClubMatch)=>ReactNode}){
  const [tab,setTab]=useState('eigen'),[toonGespeeld,setToonGespeeld]=useState(true),[ploeg,setPloeg]=useState<string|null>(null);
  const eigen=(m:ClubMatch)=>m.thuis==='STECA VROUWEN'||m.uit==='STECA VROUWEN';
  const reeks=(bron?.reekswedstrijden??[]).map(m=>data.matches.find(c=>c.thuis===m.thuis&&c.uit===m.uit&&Date.parse(c.aftrap)===Date.parse(m.aftrap))??({match_key:'twizzit-'+m.id,seizoen:bron!.seizoen,aftrap:m.aftrap,thuis:m.thuis,uit:m.uit,thuis_score:m.score?.[0]??null,uit_score:m.score?.[1]??null,is_test:false,reeks:m.reeks,locaties:m.locaties}));
@@ -37,16 +37,13 @@ export function VrouwenKalender({data,bron,inhoud}:{data:ClubData;bron?:VrouwenK
  {tab==='ploegen'&&!ploeg?<><div className="veld"><select aria-label="Reeks"><option>{bron?.klassementen[0]?.naam??'Dames Zele'}</option></select></div><ul className="lijst omrand">{ploegen.map(naam=>{const thuis=reeks.find(m=>m.thuis===naam&&m.locaties?.length);return <li key={naam}><button className="rij tekst-knop v-ploegenrij" onClick={()=>setPloeg(naam)}><span><strong>{naam}</strong><br/><span className="zacht klein">{thuis?.locaties?.map(l=>[l.zaal,l.adres].filter(Boolean).join(' · ')).join(' / ')??'Terrein onbekend'}</span></span><span>›</span></button></li>;})}</ul></>:<>
  {ploeg&&<><button className="knop licht klein" onClick={()=>setPloeg(null)}>‹ Alle ploegen</button><h2>{ploeg}</h2></>}
  <label className="klein zacht" style={{display:'block',marginBottom:10}}><input type="checkbox" checked={toonGespeeld} onChange={e=>setToonGespeeld(e.target.checked)}/> gespeelde matchen tonen</label>
- {[...perDatum.entries()].map(([datum,ms])=><section key={datum}>{tab!=='eigen'&&<h3 style={{marginTop:12}}>{vrouwenDatum(ms[0].aftrap)}</h3>}{ms.map(m=><VrouwenKalenderKaart key={m.match_key} match={m} toonDatum={tab==='eigen'}>{eigen(m)&&data.matches.some(x=>x.match_key===m.match_key)?inhoud?.(m):null}</VrouwenKalenderKaart>)}</section>)}
+ {[...perDatum.entries()].map(([datum,ms])=><section key={datum}>{tab!=='eigen'&&<h3 style={{marginTop:12}}>{vrouwenDatum(ms[0].aftrap)}</h3>}{ms.map(m=><VrouwenKalenderKaart key={m.match_key} match={m} toonDatum={tab==='eigen'} verslagKnop={data.matches.some(x=>x.match_key===m.match_key)?verslag?.(m):null}>{eigen(m)&&data.matches.some(x=>x.match_key===m.match_key)?inhoud?.(m):null}</VrouwenKalenderKaart>)}</section>)}
  {!wedstrijden.length&&<div className="kaart zacht">Geen matchen gevonden.</div>}</>}</>;
 }
-function VrouwenKalenderKaart({match:m,toonDatum,children}:{match:ClubMatch;toonDatum:boolean;children?:ReactNode}){
+function VrouwenKalenderKaart({match:m,toonDatum,children,verslagKnop}:{match:ClubMatch;toonDatum:boolean;children?:ReactNode;verslagKnop?:ReactNode}){
  const thuis=m.thuis==='STECA VROUWEN',uit=m.uit==='STECA VROUWEN',gespeeld=m.thuis_score!==null&&m.uit_score!==null;
  const verschil=gespeeld?(m.thuis_score!-m.uit_score!)*(thuis?1:-1):0,res=gespeeld&&(thuis||uit)?verschil>0?'winst':verschil<0?'verlies':'gelijk':null;
- return <article className={'kaart '+(thuis||uit?'accent':'')}>{toonDatum&&<div className="rij zacht" style={{marginBottom:6}}><span>{vrouwenDatum(m.aftrap)} · {vrouwenUur(m.aftrap)}</span><span>{m.reeks??'Dames Zele'}</span></div>}
- <div className="uitslag"><div className="thuis" style={{fontWeight:thuis?700:400}}>{m.thuis}</div><div className={'score '+(gespeeld?'gespeeld':'gepland')}>{gespeeld?`${m.thuis_score} - ${m.uit_score}`:vrouwenUur(m.aftrap)}</div><div style={{fontWeight:uit?700:400}}>{m.uit}</div></div>
- <div className="rij" style={{marginTop:8}}><span className="zacht">{m.locaties?.map(l=>[l.zaal,l.adres].filter(Boolean).join(' · ')).join(' / ')||'Terrein onbekend'}</span><span className="rij" style={{gap:6}}>{res&&<span className={'res '+res}>{res}</span>}<MapsKnop terrein={m.locaties?.[0]?.adres??null}/></span></div>
- {children&&<><div className="ticket-scheur" aria-hidden="true"/>{children}</>}</article>;
+ return <KalenderTicket toonDatum={toonDatum} datum={vrouwenDatum(m.aftrap)} uur={vrouwenUur(m.aftrap)} reeks={m.reeks??'Dames Zele'} thuis={m.thuis} uit={m.uit} eigenThuis={thuis} eigenUit={uit} status={gespeeld?'gespeeld':'gepland'} scoreTekst={gespeeld?`${m.thuis_score} - ${m.uit_score}`:vrouwenUur(m.aftrap)} terrein={m.locaties?.map(l=>[l.zaal,l.adres].filter(Boolean).join(' · ')).join(' / ')||null} res={res} verslagKnop={verslagKnop}>{children}</KalenderTicket>;
 }
 export function VrouwenHome({data,children,stand}:{data:ClubData;children?:ReactNode;stand?:{positie:number;punten:number;gespeeld:number;voor:number}}){
  const komend=data.matches.filter(m=>Date.parse(m.aftrap)>Date.now()&&m.thuis_score===null).sort((a,b)=>a.aftrap.localeCompare(b.aftrap));
