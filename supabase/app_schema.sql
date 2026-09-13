@@ -2186,3 +2186,37 @@ end $$;
 revoke all on function club_bewaar_bericht(text,uuid,text,boolean,boolean) from public;
 grant execute on function club_bewaar_bericht(text,uuid,text,boolean,boolean) to authenticated;
 grant execute on function club_lichtkrant(text) to anon,authenticated;
+
+-- Rechtstreekse Twizzit-start: alleen de database controleert de planning.
+alter table public.vrouwen_sync add column if not exists dispatch_at timestamptz;
+create or replace function public.vrouwen_dispatch(p_force boolean default false) returns boolean
+language plpgsql security definer set search_path=public,extensions as $$
+declare r vrouwen_sync; lokaal timestamp:=now() at time zone 'Europe/Brussels'; due boolean; sleutel text;
+begin
+ select * into r from vrouwen_sync where id for update;
+ if not found then return false;end if;
+ if r.gestart>coalesce(r.afgerond,'epoch') and r.gestart>now()-interval '10 minutes' then return false;end if;
+ if r.dispatch_at>coalesce(r.afgerond,'epoch') and r.dispatch_at>now()-interval '10 minutes' then return false;end if;
+ due:=p_force or r.laatste_succes is null or coalesce(r.aangevraagd>coalesce(r.afgerond,'epoch'),false);
+ due:=due or exists(select 1 from generate_series(lokaal::date-6,lokaal::date,interval '1 day') d where extract(isodow from d) in(2,3,4) and d+interval '22 hours'<=lokaal and (d+interval '22 hours') at time zone 'Europe/Brussels'>coalesce(r.laatste_succes,'epoch'));
+ due:=due or exists(select 1 from club_matches where club_id='vrouwen' and not is_test and aftrap+interval '2 hours'<=now() and aftrap+interval '2 hours'>coalesce(r.laatste_succes,'epoch'));
+ if not due or (r.fout is not null and r.afgerond>now()-interval '10 minutes' and not p_force) then return false;end if;
+ select decrypted_secret into sleutel from vault.decrypted_secrets where name='twizzit_github_token' limit 1;
+ if sleutel is null then raise exception 'De rechtstreekse updatekoppeling is nog niet ingesteld.';end if;
+ perform net.http_post(url:='https://api.github.com/repos/arthurpepermans/steca-competitie-test/actions/workflows/sync-vrouwen.yml/dispatches',
+ headers:=jsonb_build_object('Authorization','Bearer '||sleutel,'Accept','application/vnd.github+json','Content-Type','application/json','User-Agent','Steca-Twizzit'),
+ body:='{"ref":"main"}'::jsonb,timeout_milliseconds:=15000);
+ update vrouwen_sync set dispatch_at=now(),aangevraagd=case when p_force then now() else aangevraagd end,fout=null where id;
+ return true;
+end $$;
+revoke all on function public.vrouwen_dispatch(boolean) from public,anon,authenticated;
+create or replace function public.club_twizzit(p_club text,p_start boolean default false) returns jsonb language plpgsql security definer set search_path=public as $$
+declare r vrouwen_sync;begin
+ if p_club<>'vrouwen' or not club_admin(p_club) then raise exception 'Alleen een vrouwenadmin kan Twizzit bijwerken.';end if;
+ if p_start then perform vrouwen_dispatch(true);end if;
+ select * into r from vrouwen_sync where id;
+ return jsonb_build_object('laatste_succes',r.laatste_succes,'wacht',r.dispatch_at>coalesce(r.afgerond,'epoch') and r.dispatch_at>now()-interval '10 minutes','bezig',r.gestart>coalesce(r.afgerond,'epoch') and r.gestart>now()-interval '10 minutes','fout',r.fout);
+end $$;
+-- Idempotent: vervangt dezelfde job. De GitHub-workflow heeft geen kwartiercron meer.
+select cron.schedule('steca-twizzit-planning','* * * * *','select public.vrouwen_dispatch(false)');
+-- Einde rechtstreekse Twizzit-start.

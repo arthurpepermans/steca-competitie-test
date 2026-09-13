@@ -1,7 +1,5 @@
 name: Twizzit vrouwen bijwerken
 on:
-  schedule:
-    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 permissions:
   contents: read

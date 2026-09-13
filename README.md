@@ -22,3 +22,17 @@ Accounts van de echte clubapp werken hier niet automatisch. Registreer een apart
 Supabase-dashboardtoegang is afzonderlijk van GitHub-toegang. Voor structurele databasewijzigingen gebruikt Arthur het testproject in Supabase.
 
 Voor overname naar productie: beoordeel de wijziging en maak een afzonderlijke pull request in de productierepository. Neem de testspecifieke configuratie en fictieve gegevens niet over.
+
+### Rechtstreekse Twizzit-updates in test
+
+`club_twizzit('vrouwen', true)` start voor centrale admins rechtstreeks de GitHub-workflow.
+De databasejob `steca-twizzit-planning` controleert elke minuut of een update nodig is:
+twee uur na aftrap, of dinsdag/woensdag/donderdag om 22:00 Europe/Brussels.
+GitHub zelf heeft hiervoor geen periodieke workflowstart meer. Tijdzone en zomertijd
+worden in Postgres berekend. Actieve aanvragen krijgen tien minuten om te starten;
+de worker bewaakt daarnaast dat slechts één scrape tegelijk wordt verwerkt.
+
+Vereist: pg_cron, pg_net en Vault, met geheim `twizzit_github_token` dat de workflow
+in deze testrepository mag starten. De waarde hoort uitsluitend in Vault.
+De bestaande GitHub-secret `TWIZZIT_WORKER_TOKEN` blijft nodig om het resultaat op te slaan.
+De SQL staat in `supabase/app_schema.sql`. De koppeling is uitsluitend voor de testdatabase.
