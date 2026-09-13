@@ -21,3 +21,10 @@
 .v-wasmand-kop{display:flex;align-items:center;gap:18px}.v-wasmand-kop .wasmand-tekening{width:85px;height:80px}
 
 [data-ploeg="vrouwen"] .aftel-vak{background:#000;color:#fff}[data-ploeg="vrouwen"] .aftel-vak small{color:#fff}
+
+[data-ploeg="vrouwen"] .ticket-scheur{border-top-color:#000}
+[data-ploeg="vrouwen"] .match-affiche{border-bottom-color:#000}
+.v-kop .v-ploegknop{width:44px;height:44px;display:grid;place-items:center;flex-shrink:0;border:1px solid var(--tekst)}
+.v-kop .v-ploegknop img{width:32px;height:38px;object-fit:contain}
+.v-kop .thema-knop,.v-kop .profiel-knop{flex-shrink:0}
+@media(max-width:500px){.v-kop{gap:7px;padding-left:12px;padding-right:12px}.v-kop .clubmerk{gap:7px;min-width:0}.v-kop .clubmerk>span{font-size:18px}.v-kop .clubmerk img{width:33px;height:40px}.v-kop .v-ploegknop,.v-kop .thema-knop,.v-kop .profiel-knop{width:36px;height:40px}}
