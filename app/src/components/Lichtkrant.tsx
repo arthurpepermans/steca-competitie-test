@@ -1,3 +1,4 @@
+import {lichtkrantPositie} from "../lib/lichtkrantPositie";
 import { useEffect, useRef, useState } from "react";
 import { haalBoetes, haalLedenBasis, haalLichtkrantBerichten, haalMatches, haalStats, haalStemPunten, haalWasbeurten } from "../lib/api";
 import { LICHTKRANT_HERLADEN } from "./LichtkrantBeheer";
@@ -29,19 +30,22 @@ function useLichtkrant(tekst: string, wijn = false) {
     let vorige = performance.now();
     let frame = 0;
     let vast = false;
+    let gestopt = false;
     const teken = () => {
+      if (gestopt || !b.isConnected) return;
       const breedte = kopieen[0].offsetWidth;
+      if (breedte <= 0) return;
       const periode = breedte + (wijn ? 0 : TUSSENRUIMTE);
       const totaal = KOPIEEN * periode;
       kopieen.forEach((k, i) => {
-        let x = basis + i * periode;
-        while (x < -breedte) x += totaal;
-        while (x > totaal - breedte) x -= totaal;
+        const x = lichtkrantPositie(basis + i * periode, breedte, totaal);
+        if (x === null) return;
         k.style.transform = `translate3d(${x}px,0,0)`;
       });
     };
     teken();
     const stap = (nu: number) => {
+      if (gestopt) return;
       const dt = Math.min(64, nu - vorige);
       vorige = nu;
       if (!vast && !document.hidden) {
@@ -58,6 +62,7 @@ function useLichtkrant(tekst: string, wijn = false) {
     b.addEventListener("pointercancel", laatLos);
     b.addEventListener("pointerleave", laatLos);
     return () => {
+      gestopt = true;
       cancelAnimationFrame(frame);
       b.removeEventListener("pointerdown", houdVast);
       b.removeEventListener("pointerup", laatLos);
