@@ -1914,7 +1914,7 @@ end $$;
 -- zijn uitsluitend aanvragen, nooit automatische beheer- of spelersrechten.
 create or replace function public.club_nieuw_account() returns trigger language plpgsql security definer set search_path=public as $$
 begin
- if new.raw_user_meta_data->>'club'='vrouwen' and new.raw_user_meta_data->>'club_functie' in ('speler','spelercoach','coach','verantwoordelijke') then
+ if not exists(select 1 from club_members where club_id='vrouwen' and user_id=new.id and status='actief') and new.raw_user_meta_data->>'club'='vrouwen' and new.raw_user_meta_data->>'club_functie' in ('speler','spelercoach','coach','verantwoordelijke') then
  insert into club_role_requests values('vrouwen',new.id,new.raw_user_meta_data->>'club_functie') on conflict do nothing;
  end if;return new;
 end $$;
@@ -1929,6 +1929,62 @@ do $$ declare f record;begin
 end $$;
 grant execute on function club_data(text),club_vraag_rol(text,text),club_zet_lid(text,uuid,text,boolean,boolean,text),club_aanwezig(text,text,text,uuid),club_bewaar_opstelling(text,text,jsonb,jsonb,integer),club_bewaar_dream(text,jsonb,integer),club_bewaar_prono(text,text,integer,integer),club_bewaar_verslag(text,text,integer,integer,jsonb,text),club_stem(text,text,uuid,uuid,uuid),club_zet_wasmand(text,text,uuid) to authenticated;
 -- Einde ploegscheiding.
+-- Ploegregistratie: private e-mailkoppeling met vooraf ingeschreven speelsters.
+create table if not exists public.club_registration (
+ club_id text not null check(club_id='vrouwen'),
+ email text not null check(email=lower(trim(email)) and position('@' in email)>1),
+ member_id uuid not null,
+ primary key(club_id,email), unique(club_id,member_id),
+ foreign key(club_id,member_id) references club_members(club_id,id) on delete cascade
+);
+alter table public.club_registration enable row level security;
+revoke all on public.club_registration from public,anon,authenticated;
+grant all on public.club_registration to service_role;
+
+create or replace function public.club_koppel_registratie() returns trigger
+language plpgsql security definer set search_path=public as $$
+declare doel uuid;
+begin
+ if new.email_confirmed_at is null then return new; end if;
+ select member_id into doel from club_registration where club_id='vrouwen' and email=lower(trim(new.email));
+ if doel is null then return new; end if;
+ -- Een bestaande koppeling of handmatige blokkering nooit overschrijven.
+ if exists(select 1 from club_members where club_id='vrouwen' and user_id=new.id and id<>doel) then return new; end if;
+ update club_members set user_id=new.id where id=doel and club_id='vrouwen'
+   and status='actief' and (user_id is null or user_id=new.id);
+ if found then delete from club_role_requests where club_id='vrouwen' and user_id=new.id; end if;
+ return new;
+end $$;
+drop trigger if exists on_club_registration on auth.users;
+create trigger on_club_registration after insert or update of email,email_confirmed_at on auth.users
+for each row execute function club_koppel_registratie();
+
+create or replace function public.club_import_members(p_leden jsonb) returns integer
+language plpgsql security definer set search_path=public as $$
+declare r jsonb; mail text; doel uuid; gebruiker uuid; aantal integer:=0;
+begin
+ if jsonb_typeof(p_leden)<>'array' then raise exception 'Verwacht een ledenlijst.'; end if;
+ for r in select value from jsonb_array_elements(p_leden) loop
+ mail:=lower(trim(r->>'email'));
+ if mail is null or position('@' in mail)<2 or coalesce(r->>'naam','')='' or coalesce(r->>'functie','') not in ('speler','coach','verantwoordelijke') then
+ raise exception 'Ongeldige inschrijving.'; end if;
+ select member_id into doel from club_registration where club_id='vrouwen' and email=mail;
+ -- Een herhaalde import verandert geen handmatig ingestelde rechten.
+ if doel is not null then continue; end if;
+ select id into gebruiker from auth.users where lower(trim(email))=mail and email_confirmed_at is not null;
+ if gebruiker is not null then select id into doel from club_members where club_id='vrouwen' and user_id=gebruiker; end if;
+ if doel is null then
+ insert into club_members(club_id,user_id,naam,functie,speelt) values('vrouwen',gebruiker,r->>'naam',r->>'functie',r->>'functie'='speler') returning id into doel;
+ end if;
+ insert into club_registration(club_id,email,member_id) values('vrouwen',mail,doel);
+ if gebruiker is not null then delete from club_role_requests where club_id='vrouwen' and user_id=gebruiker; end if;
+ aantal:=aantal+1;
+ end loop;
+ return aantal;
+end $$;
+revoke all on function public.club_import_members(jsonb),public.club_koppel_registratie() from public,anon,authenticated;
+grant execute on function public.club_import_members(jsonb),public.club_koppel_registratie() to service_role;
+-- Einde ploegregistratie.
 
 
 -- Ploegmeldingen: aparte voorkeuren en unieke jobs, nooit de mannenwachtrij.
