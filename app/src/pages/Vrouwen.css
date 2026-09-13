@@ -40,3 +40,5 @@
 [data-ploeg="vrouwen"] .match-affiche img.affiche-logo{scale:1}
 
 .v-ploegenrij{width:100%;text-align:left;padding:0;color:var(--tekst)}.v-kalender-verslag{margin-top:16px}.v-kalender-verslag>summary{display:inline-flex;cursor:pointer}
+
+.v-club .kaart.accent{margin-top:0;margin-bottom:18px}
