@@ -9,6 +9,7 @@ beforeAll(async()=>{db=new PGlite();await db.exec(`
 create role anon;create role authenticated;create role service_role;
 create schema auth;create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}',email text,email_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.uid',true),'')::uuid$$;
+create function public.mag_testbadges_beheren() returns boolean language sql as $$select auth.uid()='${beheer}'::uuid$$;
 create table members(id uuid,user_id uuid,naam text,status text,is_admin boolean);
 create function public.is_admin() returns boolean language sql security definer as $$select exists(select 1 from members where user_id=auth.uid() and status='actief' and is_admin)$$;
 create table supporter_profiles(user_id uuid,naam text,actief boolean);
@@ -18,6 +19,7 @@ insert into supporter_profiles values('${vrouw}','Speelster',true),('${beheer}',
 `);
 const sql=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Ploegscheiding:')[1].split('-- Einde ploegscheiding.')[0];
 await db.exec('-- Ploegscheiding:'+sql);
+await db.exec(readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Alleen de aangewezen testbeheerder kan fictieve vrouwenbadges toewijzen.')[1]);
 const registratie=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Ploegregistratie:')[1].split('-- Einde ploegregistratie.')[0];
 await db.exec('-- Ploegregistratie:'+registratie);
 const profiel=readFileSync(new URL('../../../supabase/app_schema.sql',import.meta.url),'utf8').split('-- Vrouwenprofielbeheer,')[1].split('-- Einde vrouwenprofielbeheer.')[0];
@@ -29,6 +31,17 @@ insert into club_matches(club_id,match_key,seizoen,aftrap,thuis,uit) values('vro
 afterAll(async()=>await db.close());
 beforeEach(async()=>{await db.exec(`reset role;truncate club_attendance,club_lineups,club_dream,club_predictions,club_role_requests,club_push_jobs,club_push_preferences;select set_config('test.uid','${man}',false);set role authenticated;`);});
 async function data(){return (await db.query<{d:any}>("select club_data('vrouwen') d")).rows[0].d;}
+it('houdt badgeproeven bij de aangewezen testbeheerder en laat ze volledig opruimen',async()=>{
+ await expect(db.exec(`select club_testbadge('vrouwen','${lid}','gouden_stier','2026-2027')`)).rejects.toThrow(/testbeheerder/);
+ await expect(db.exec('select * from club_badge_tests')).rejects.toThrow(/permission denied/);
+ await db.exec(`select set_config('test.uid','${beheer}',false)`);
+ await expect(db.exec(`select club_testbadge('mannen','${lid}','gouden_stier','2026-2027')`)).rejects.toThrow(/testbeheerder/);
+ await expect(db.exec(`select club_testbadge('vrouwen','${lid}','onbekend',null)`)).rejects.toThrow(/Onbekende/);
+ await db.exec(`select club_testbadge('vrouwen','${lid}','gouden_stier','2026-2027');select club_testbadge('vrouwen','${lid}','gouden_stier','2026-2027')`);
+ expect((await data()).badgetests).toEqual([{persoon:lid,badge:'gouden_stier',seizoen:'2026-2027'}]);
+ await db.exec(`select club_testbadge('vrouwen','${lid}','gouden_stier',null,true)`);
+ expect((await data()).badgetests).toEqual([]);
+});
 it('koppelt een ingeschreven speelster pas na e-mailbevestiging en houdt haar mail privé',async()=>{
  await expect(db.exec(`select club_import_members('[]')`)).rejects.toThrow(/permission denied/);
  await expect(db.exec(`select * from club_registration`)).rejects.toThrow(/permission denied/);

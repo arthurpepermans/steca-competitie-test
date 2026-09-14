@@ -1824,10 +1824,18 @@ begin
  insert into club_member_attendance values(p_club,p_match,p_lid,p_status) on conflict(club_id,match_key,member_id) do update set status=excluded.status;
  end if;
 end $$;
+-- Vrouwenbadges: testtoewijzingen blijven gescheiden van behaalde prestaties.
+create table if not exists public.club_badge_tests (
+ club_id text not null check(club_id='vrouwen'),persoon uuid not null,badge text not null,seizoen text not null default '',
+ primary key(club_id,persoon,badge,seizoen)
+);
+alter table public.club_badge_tests enable row level security;
+revoke all on public.club_badge_tests from public,anon,authenticated;
 create or replace function public.club_data(p_club text) returns jsonb language plpgsql stable security definer set search_path=public as $$
 begin
  if club_role(p_club)='geblokkeerd' then raise exception 'Log in met een actief account.';end if;
  return jsonb_build_object(
+ 'badgetests',coalesce((select jsonb_agg(jsonb_build_object('persoon',b.persoon,'badge',b.badge,'seizoen',nullif(b.seizoen,''))) from club_badge_tests b where b.club_id=p_club),'[]'),
  'rol',club_role(p_club),'admin',club_admin(p_club),'staf',club_staf(p_club),'user_id',auth.uid(),
  'leden',coalesce((select jsonb_agg(to_jsonb(m)) from club_members m where club_id=p_club and (status='actief' or club_admin(p_club))),'[]'),
  'aanvragen',case when club_admin(p_club) then coalesce((select jsonb_agg(jsonb_build_object('user_id',r.user_id,'naam',club_naam(r.user_id),'functie',r.functie)) from club_role_requests r where r.club_id=p_club),'[]') else '[]'::jsonb end,
@@ -2220,3 +2228,17 @@ end $$;
 -- Idempotent: vervangt dezelfde job. De GitHub-workflow heeft geen kwartiercron meer.
 select cron.schedule('steca-twizzit-planning','* * * * *','select public.vrouwen_dispatch(false)');
 -- Einde rechtstreekse Twizzit-start.
+
+
+-- Alleen de aangewezen testbeheerder kan fictieve vrouwenbadges toewijzen.
+create or replace function public.club_testbadge(p_club text,p_persoon uuid,p_badge text,p_seizoen text,p_verwijder boolean default false) returns void language plpgsql security definer set search_path=public as $$
+begin
+ if p_club<>'vrouwen' or not coalesce(mag_testbadges_beheren(),false) then raise exception 'Alleen de aangewezen testbeheerder.';end if;
+ if p_verwijder then delete from club_badge_tests where club_id=p_club and persoon=p_persoon;return;end if;
+ if not (p_badge=any(array['gouden_stier','het_kanon','assistenkoning','maestro','de_muur','betonblok','beenhouwer','rosse_furie','fundering','vaste_waarde','clubmeubilair','star_boy','goat','kuisvrouw','junior_dor','eentje_is_geentje','dubbele_cijfers','goalgetter','sluipschutter','67','triple_digits','wingman','facteur','de_architect','kdb_der_juniors','muur_van_dendermonde','veilige_handen','opgewarmd_door_georgie','golden_glove','official_junior','toogplekker','sterkhouder','georgies_favoriet','steca_legend','hattrick','vijf_op_een_rij','rots_in_de_branding','junior_van_de_match','laat_je_ploeg','getikte_zot','fan:ultra_jaar','fan:eeuwige_ultra','fan:vaste_klant','fan:prioriteiten','fan:perfect_seizoen','fan:welkom','fan:smaak','fan:toog','fan:hardcore','fan:team','fan:tribune'])) then raise exception 'Onbekende badge.';end if;
+ if p_seizoen is not null and p_seizoen !~ '^20[0-9]{2}-20[0-9]{2}$' then raise exception 'Ongeldig seizoen.';end if;
+ if not exists(select 1 from club_members where club_id=p_club and id=p_persoon and status='actief') and not exists(select 1 from auth.users where id=p_persoon) then raise exception 'Persoon niet gevonden.';end if;
+ insert into club_badge_tests values(p_club,p_persoon,p_badge,coalesce(p_seizoen,'')) on conflict do nothing;
+end $$;
+revoke all on function public.club_testbadge(text,uuid,text,text,boolean) from public,anon;
+grant execute on function public.club_testbadge(text,uuid,text,text,boolean) to authenticated;
